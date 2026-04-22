@@ -1,85 +1,110 @@
 # ⚽ EPL Match Predictor AI
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://epl-pred.streamlit.app/)
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)
+![Next.js](https://img.shields.io/badge/Frontend-Next.js%2016-black)
 ![XGBoost](https://img.shields.io/badge/Model-XGBoost-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-A professional-grade football prediction engine that uses **Machine Learning (XGBoost)** and **Poisson Distribution** logic to forecast English Premier League match results.
-
-### 🔴 [Live Demo: epl-pred.streamlit.app](https://epl-pred.streamlit.app/)
+A full-stack, professional-grade football prediction engine that uses **XGBoost** and **Poisson Distribution** to forecast English Premier League match results — complete with a sleek, animated analytics dashboard.
 
 ---
 
 ## 📖 About The Project
 
-This is not just another random number generator. The **EPL Match Predictor AI** is a data-driven tool designed to find value in the betting market by calculating **Expected Goals (xG)** and **Win Probabilities** for upcoming fixtures.
+The **EPL Match Predictor AI** is a data-driven tool that calculates **Expected Goals (xG)** and **Win Probabilities** for any Premier League fixture. Select a home and away team, hit **Predict**, and get a full analytics breakdown in seconds.
 
-It features a custom-built, "Glassmorphism" UI inspired by the official Premier League design system, ensuring that the analytics look as good as they perform.
+It is built as a decoupled full-stack application:
+
+- A **FastAPI** Python backend that runs the ML pipeline and serves predictions via a REST API.
+- A **Next.js 16** frontend that consumes the API and renders a rich, animated analytics dashboard.
 
 ### ✨ Key Features
 
-* **🧠 Hybrid AI Model:** Combines **XGBoost** (for non-linear pattern recognition) with **Poisson Regression** (for accurate scoreline probabilities).
-* **🔄 Live Form Detection:** Automatically connects to the **Fantasy Premier League (FPL) API** to fetch the latest "Last 5 Games" form for every team. No manual data entry required.
-* **📊 Dynamic Dashboard:** Visualizes Win/Draw/Loss probabilities with real-time progress bars.
-* **💎 Betting Insights:** Automatically flags "High Value" opportunities when the model's confidence exceeds 60%.
-* **🎨 Premium UI:** Custom CSS implementation featuring the official EPL color palette (Deep Purple & Neon Green).
+- **🧠 Hybrid AI Model** — Combines **XGBoost** (non-linear pattern recognition) with **Poisson Distribution** (scoreline probability matrix).
+- **🔄 Live Form Detection** — Automatically fetches each team's last-5-game form from the **Fantasy Premier League (FPL) API** at prediction time. No manual data entry required.
+- **📊 Rich Analytics Dashboard** — Animated scoreboard (xG), win probability donut chart, outcome probability bar, xG comparison bars, Poisson heatmap, goal distribution chart, and recent form cards.
+- **💡 AI Insight Banner** — Automatically surfaces a contextual insight (e.g. "Strong Home Advantage" or "Tight Contest") based on the probability outputs.
+- **🎨 Premium Dark UI** — Built with Tailwind CSS v4, shadcn/ui, and Framer Motion for smooth animations and micro-interactions. Fully responsive on mobile.
 
 ---
 
 ## 🛠️ Tech Stack
 
-* **Core Logic:** `Python`
-* **Machine Learning:** `XGBoost`, `Scikit-Learn`, `SciPy` (Poisson)
-* **Data Processing:** `Pandas`, `NumPy`
-* **Web Framework:** `Streamlit`
-* **Live Data Source:** `FPL API` (Fantasy Premier League)
+### Backend
+
+| Tool               | Purpose                        |
+| ------------------ | ------------------------------ |
+| `FastAPI`        | REST API framework             |
+| `Uvicorn`        | ASGI server                    |
+| `XGBoost`        | ML model for xG prediction     |
+| `Scikit-Learn`   | Model pipeline & preprocessing |
+| `SciPy`          | Poisson probability matrix     |
+| `Pandas / NumPy` | Data processing                |
+| `Requests`       | Live FPL API calls             |
+
+### Frontend
+
+| Tool                | Purpose                            |
+| ------------------- | ---------------------------------- |
+| `Next.js 16`      | React framework (App Router)       |
+| `Tailwind CSS v4` | Styling                            |
+| `shadcn/ui`       | UI primitives                      |
+| `Framer Motion`   | Animations                         |
+| `Recharts`        | Goal distribution & heatmap charts |
+| `Lucide React`    | Icons                              |
 
 ---
 
 ## 🚀 How It Works
 
-1.  **Data Fetching:** When you select two teams, the app queries the live FPL API to retrieve their most recent match results.
-2.  **Feature Engineering:** It calculates specific "Form Metrics" (Average Goals Scored & Conceded over the last 5 games).
-3.  **Prediction:** These metrics are fed into two pre-trained XGBoost models:
-    * `optimized_model_home.pkl`: Predicts Home Team Goals.
-    * `optimized_model_away.pkl`: Predicts Away Team Goals.
-4.  **Probability Matrix:** The predicted xG values are run through a **Poisson Distribution Matrix** to simulate 10,000 possible match outcomes and calculate the exact percentage chance of a Home Win, Draw, or Away Win.
+1. **Team Selection** — User picks a Home and Away team from a live-loaded dropdown.
+2. **Live Form Fetch** — Backend queries the FPL API for each team's average goals scored & conceded over their last 5 matches.
+3. **xG Prediction** — The form metrics are fed into two pre-trained XGBoost models:
+   - `models/optimized_model_home.pkl` → Predicts Home xG
+   - `models/optimized_model_away.pkl` → Predicts Away xG
+4. **Poisson Matrix** — The xG values are used to build a 10×10 Poisson probability matrix, from which Home Win, Draw, and Away Win percentages are derived.
+5. **Dashboard** — The full prediction payload is rendered as an animated analytics dashboard on the frontend.
 
 ---
 
-## 💻 Local Installation
+## 💻 Local Setup
 
-Want to run this locally? Follow these steps:
+### Prerequisites
 
-1.  **Clone the Repo**
-    ```bash
-    git clone [https://github.com/mavnish604/EPL_SCORE_PRED.git](https://github.com/mavnish604/EPL_SCORE_PRED.git)
-    cd EPL_SCORE_PRED
-    ```
+- Python 3.11+
+- Node.js 18+
 
-2.  **Install Dependencies**
-    ```bash
-    pip install -r requirements.txt
-    ```
+### 1. Clone the repo
 
-3.  **Run the App**
-    ```bash
-    streamlit run app.py
-    ```
+```bash
+git clone https://github.com/mavnish604/EPL_SCORE_PRED.git
+cd EPL_SCORE_PRED
+```
+
+### 2. Start the Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -m uvicorn main:app --reload --port 8000
+```
+
+The API will be live at `http://localhost:8000`.
+Interactive docs: `http://localhost:8000/docs`
+
+### 3. Start the Frontend
+
+```bash
+cd frontend-next
+npm install
+# Create the env file
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api" > .env.local
+npm run dev
+```
+
+The app will be live at `http://localhost:3000`.
 
 ---
 
-## 📂 Project Structure
-
-```text
-EPL_SCORE_PRED/
-├── app.py                   # Main application interface & logic
-├── live_data.py             # Script to fetch real-time data from FPL API
-├── optimized_model_home.pkl # Trained XGBoost model for Home Goals
-├── optimized_model_away.pkl # Trained XGBoost model for Away Goals
-├── requirements.txt         # List of python dependencies
-└── README.md                # Documentation
- 
-
-Project built by Avnish Mishra in 2025.
+*Project built by Avnish Mishra — 2025.*
