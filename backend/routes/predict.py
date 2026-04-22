@@ -3,7 +3,7 @@ API routes for the EPL Predictor.
 """
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from services.live_data import get_team_list
 from services.prediction import predict_match
@@ -15,8 +15,8 @@ router = APIRouter(prefix="/api")
 # Request / Response schemas
 # ---------------------------------------------------------------------------
 class PredictRequest(BaseModel):
-    home_team: str
-    away_team: str
+    home_team: str = Field(..., min_length=1, max_length=100)
+    away_team: str = Field(..., min_length=1, max_length=100)
 
 
 # ---------------------------------------------------------------------------
