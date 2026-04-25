@@ -3,7 +3,7 @@ import type { PredictionResult } from "@/types/prediction";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export async function fetchTeams(): Promise<string[]> {
-  const res = await fetch(`${API_BASE}/teams`);
+  const res = await fetch(`${API_BASE}/epl/teams`);
   if (!res.ok) throw new Error("Failed to fetch team list");
   return res.json();
 }
@@ -12,7 +12,7 @@ export async function fetchPrediction(
   homeTeam: string,
   awayTeam: string
 ): Promise<PredictionResult> {
-  const res = await fetch(`${API_BASE}/predict`, {
+  const res = await fetch(`${API_BASE}/epl/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ home_team: homeTeam, away_team: awayTeam }),
