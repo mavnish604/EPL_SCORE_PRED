@@ -37,6 +37,8 @@ function ResultSkeleton() {
 
 export default function Home() {
   const {
+    league,
+    setLeague,
     teams,
     teamsLoading,
     homeTeam,
@@ -68,6 +70,23 @@ export default function Home() {
             <h2 className="text-center text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-5">
               Match Setup
             </h2>
+
+            <div className="flex justify-center gap-4 mb-8">
+              <Button
+                variant={league === "epl" ? "default" : "outline"}
+                onClick={() => setLeague("epl")}
+                className="w-32"
+              >
+                Premier League
+              </Button>
+              <Button
+                variant={league === "laliga" ? "default" : "outline"}
+                onClick={() => setLeague("laliga")}
+                className="w-32"
+              >
+                La Liga
+              </Button>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">
               <TeamSelector
