@@ -1,25 +1,35 @@
 import type { PredictionResult } from "@/types/prediction";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "";
 
-export async function fetchTeams(): Promise<string[]> {
-  const res = await fetch(`${API_BASE}/epl/teams`);
-  if (!res.ok) throw new Error("Failed to fetch team list");
-  return res.json();
+async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || `API request failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export async function fetchTeams(league: "epl" | "laliga" = "epl"): Promise<string[]> {
+  return fetchJson<string[]>(`${API_BASE}/api/${league}/teams`);
 }
 
 export async function fetchPrediction(
-  homeTeam: string,
-  awayTeam: string
+  home_team: string,
+  away_team: string,
+  league: "epl" | "laliga" = "epl"
 ): Promise<PredictionResult> {
-  const res = await fetch(`${API_BASE}/epl/predict`, {
+  return fetchJson<PredictionResult>(`${API_BASE}/api/${league}/predict`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ home_team: homeTeam, away_team: awayTeam }),
+    body: JSON.stringify({ home_team, away_team }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || "Prediction failed");
-  }
-  return res.json();
 }
