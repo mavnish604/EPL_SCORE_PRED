@@ -10,7 +10,7 @@ A full-stack, professional-grade football prediction engine that uses **XGBoost*
 
 ---
 
-## 📖 About The Project
+## About The Project
 
 The **EPL Match Predictor AI** is a data-driven tool that calculates **Expected Goals (xG)** and **Win Probabilities** for any Premier League fixture. Select a home and away team, hit **Predict**, and get a full analytics breakdown in seconds.
 
@@ -19,7 +19,7 @@ It is built as a decoupled full-stack application:
 - A **FastAPI** Python backend that runs the ML pipeline and serves predictions via a REST API.
 - A **Next.js 16** frontend that consumes the API and renders a rich, animated analytics dashboard.
 
-### ✨ Key Features
+###  Key Features
 
 - **Hybrid AI Model** — Combines **XGBoost** (non-linear pattern recognition) with **Poisson Distribution** (scoreline probability matrix).
 - **Live Form Detection** — Automatically fetches each team's last-5-game form from the **Fantasy Premier League (FPL) API** at prediction time. No manual data entry required.
@@ -29,7 +29,7 @@ It is built as a decoupled full-stack application:
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 
