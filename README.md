@@ -1,4 +1,4 @@
-# ⚽ EPL Match Predictor AI
+# EPL Match Predictor AI
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)
@@ -21,11 +21,11 @@ It is built as a decoupled full-stack application:
 
 ### ✨ Key Features
 
-- **🧠 Hybrid AI Model** — Combines **XGBoost** (non-linear pattern recognition) with **Poisson Distribution** (scoreline probability matrix).
-- **🔄 Live Form Detection** — Automatically fetches each team's last-5-game form from the **Fantasy Premier League (FPL) API** at prediction time. No manual data entry required.
-- **📊 Rich Analytics Dashboard** — Animated scoreboard (xG), win probability donut chart, outcome probability bar, xG comparison bars, Poisson heatmap, goal distribution chart, and recent form cards.
-- **💡 AI Insight Banner** — Automatically surfaces a contextual insight (e.g. "Strong Home Advantage" or "Tight Contest") based on the probability outputs.
-- **🎨 Premium Dark UI** — Built with Tailwind CSS v4, shadcn/ui, and Framer Motion for smooth animations and micro-interactions. Fully responsive on mobile.
+- **Hybrid AI Model** — Combines **XGBoost** (non-linear pattern recognition) with **Poisson Distribution** (scoreline probability matrix).
+- **Live Form Detection** — Automatically fetches each team's last-5-game form from the **Fantasy Premier League (FPL) API** at prediction time. No manual data entry required.
+- **Rich Analytics Dashboard** — Animated scoreboard (xG), win probability donut chart, outcome probability bar, xG comparison bars, Poisson heatmap, goal distribution chart, and recent form cards.
+- **AI Insight Banner** — Automatically surfaces a contextual insight (e.g. "Strong Home Advantage" or "Tight Contest") based on the probability outputs.
+- **Premium Dark UI** — Built with Tailwind CSS v4, shadcn/ui, and Framer Motion for smooth animations and micro-interactions. Fully responsive on mobile.
 
 ---
 
@@ -56,7 +56,7 @@ It is built as a decoupled full-stack application:
 
 ---
 
-## 🚀 How It Works
+## How It Works
 
 1. **Team Selection** — User picks a Home and Away team from a live-loaded dropdown.
 2. **Live Form Fetch** — Backend queries the FPL API for each team's average goals scored & conceded over their last 5 matches.
