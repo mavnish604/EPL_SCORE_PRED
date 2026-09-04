@@ -4,6 +4,7 @@ import { memo } from "react";
 import { motion } from "framer-motion";
 import type { PredictionResult } from "@/types/prediction";
 import AnimatedCounter from "./AnimatedCounter";
+import { getTeamLogo } from "@/lib/teamLogos";
 
 interface Props {
   result: PredictionResult;
@@ -13,6 +14,8 @@ interface Props {
 
 export default memo(function XgComparisonBar({ result, homeTeam, awayTeam }: Props) {
   const maxXg = Math.max(result.xg_home, result.xg_away, 0.01);
+  const homeLogo = getTeamLogo(homeTeam);
+  const awayLogo = getTeamLogo(awayTeam);
 
   return (
     <motion.div
@@ -28,12 +31,17 @@ export default memo(function XgComparisonBar({ result, homeTeam, awayTeam }: Pro
       <div className="space-y-5">
         {/* Home */}
         <div className="space-y-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-bold text-foreground truncate mr-2">{homeTeam}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 truncate mr-2">
+              {homeLogo && (
+                <img src={homeLogo} alt="" className="h-5 w-5 object-contain shrink-0" />
+              )}
+              <span className="text-sm font-bold text-foreground truncate">{homeTeam}</span>
+            </div>
             <AnimatedCounter
               value={result.xg_home}
               decimals={2}
-              className="text-2xl font-black text-chart-1"
+              className="text-2xl font-black text-chart-1 shrink-0"
             />
           </div>
           <div className="h-3 w-full rounded-full bg-muted/50 overflow-hidden">
@@ -48,12 +56,17 @@ export default memo(function XgComparisonBar({ result, homeTeam, awayTeam }: Pro
 
         {/* Away */}
         <div className="space-y-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-bold text-foreground truncate mr-2">{awayTeam}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 truncate mr-2">
+              {awayLogo && (
+                <img src={awayLogo} alt="" className="h-5 w-5 object-contain shrink-0" />
+              )}
+              <span className="text-sm font-bold text-foreground truncate">{awayTeam}</span>
+            </div>
             <AnimatedCounter
               value={result.xg_away}
               decimals={2}
-              className="text-2xl font-black text-chart-2"
+              className="text-2xl font-black text-chart-2 shrink-0"
             />
           </div>
           <div className="h-3 w-full rounded-full bg-muted/50 overflow-hidden">
@@ -76,7 +89,7 @@ export default memo(function XgComparisonBar({ result, homeTeam, awayTeam }: Pro
             decimals={2}
             className={result.xg_home >= result.xg_away ? "text-chart-1" : "text-chart-2"}
           />
-          <span className="text-xs text-muted-foreground ml-1.5">
+          <span className="text-xs text-muted-foreground ml-1.5 font-normal">
             in favour of {result.xg_home >= result.xg_away ? homeTeam : awayTeam}
           </span>
         </div>
@@ -84,3 +97,4 @@ export default memo(function XgComparisonBar({ result, homeTeam, awayTeam }: Pro
     </motion.div>
   );
 });
+

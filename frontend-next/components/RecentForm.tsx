@@ -4,6 +4,7 @@ import { memo } from "react";
 import { motion } from "framer-motion";
 import type { PredictionResult } from "@/types/prediction";
 import { TrendingUp, Shield } from "lucide-react";
+import { getTeamLogo } from "@/lib/teamLogos";
 
 interface Props {
   result: PredictionResult;
@@ -47,6 +48,8 @@ function StatCard({
 
 export default memo(function RecentForm({ result, homeTeam, awayTeam }: Props) {
   const { home, away } = result.form;
+  const homeLogo = getTeamLogo(homeTeam);
+  const awayLogo = getTeamLogo(awayTeam);
 
   return (
     <motion.div
@@ -56,14 +59,19 @@ export default memo(function RecentForm({ result, homeTeam, awayTeam }: Props) {
       className="bg-card border border-border rounded-xl p-5 shadow-sm"
     >
       <h3 className="text-center text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">
-        Recent Form (Last 5)
+        Recent Form (Last 5 Games)
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Home team form */}
         <div className="space-y-2">
-          <div className="text-[0.65rem] font-bold uppercase tracking-wider text-chart-1 text-center">
-            {homeTeam}
+          <div className="flex items-center justify-center gap-2 pb-1">
+            {homeLogo && (
+              <img src={homeLogo} alt="" className="h-5 w-5 object-contain" />
+            )}
+            <div className="text-xs font-bold uppercase tracking-wider text-chart-1 truncate">
+              {homeTeam}
+            </div>
           </div>
           <StatCard
             label="Avg Scored"
@@ -83,8 +91,13 @@ export default memo(function RecentForm({ result, homeTeam, awayTeam }: Props) {
 
         {/* Away team form */}
         <div className="space-y-2">
-          <div className="text-[0.65rem] font-bold uppercase tracking-wider text-chart-2 text-center">
-            {awayTeam}
+          <div className="flex items-center justify-center gap-2 pb-1">
+            {awayLogo && (
+              <img src={awayLogo} alt="" className="h-5 w-5 object-contain" />
+            )}
+            <div className="text-xs font-bold uppercase tracking-wider text-chart-2 truncate">
+              {awayTeam}
+            </div>
           </div>
           <StatCard
             label="Avg Scored"
@@ -111,3 +124,4 @@ export default memo(function RecentForm({ result, homeTeam, awayTeam }: Props) {
     </motion.div>
   );
 });
+

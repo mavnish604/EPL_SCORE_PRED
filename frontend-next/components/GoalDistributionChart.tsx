@@ -3,6 +3,7 @@
 import { memo, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { motion } from "framer-motion";
+import { getTeamLogo } from "@/lib/teamLogos";
 
 interface Props {
   matrix: number[][];
@@ -11,6 +12,9 @@ interface Props {
 }
 
 export default memo(function GoalDistributionChart({ matrix, homeTeam, awayTeam }: Props) {
+  const homeLogo = getTeamLogo(homeTeam);
+  const awayLogo = getTeamLogo(awayTeam);
+
   const data = useMemo(() => {
     const size = Math.min(matrix.length, 7);
     return Array.from({ length: size }, (_, goals) => {
@@ -32,7 +36,7 @@ export default memo(function GoalDistributionChart({ matrix, homeTeam, awayTeam 
       className="h-full flex flex-col justify-center bg-card border border-border rounded-xl p-5 shadow-sm"
     >
       <h3 className="text-center text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">
-        Goal Distribution
+        Goal Distribution Probability
       </h3>
 
       <div className="h-[220px] w-full flex items-center justify-center">
@@ -90,15 +94,24 @@ export default memo(function GoalDistributionChart({ matrix, homeTeam, awayTeam 
 
       {/* Legend */}
       <div className="flex items-center justify-center gap-5 mt-3">
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="h-2.5 w-2.5 rounded-sm bg-chart-1" />
+        <div className="flex items-center gap-2 text-xs">
+          {homeLogo ? (
+            <img src={homeLogo} alt="" className="h-4 w-4 object-contain" />
+          ) : (
+            <span className="h-2.5 w-2.5 rounded-sm bg-chart-1" />
+          )}
           <span className="text-muted-foreground font-medium">{homeTeam}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="h-2.5 w-2.5 rounded-sm bg-chart-2" />
+        <div className="flex items-center gap-2 text-xs">
+          {awayLogo ? (
+            <img src={awayLogo} alt="" className="h-4 w-4 object-contain" />
+          ) : (
+            <span className="h-2.5 w-2.5 rounded-sm bg-chart-2" />
+          )}
           <span className="text-muted-foreground font-medium">{awayTeam}</span>
         </div>
       </div>
     </motion.div>
   );
 });
+

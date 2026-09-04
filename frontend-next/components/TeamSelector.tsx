@@ -38,29 +38,49 @@ export default memo(function TeamSelector({
       initial={{ opacity: 0, x: isHome ? -15 : 15 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay: 0.15 }}
-      className="space-y-2.5 w-full"
+      className="space-y-3 w-full"
     >
-      {/* Selected team logo */}
-      {selected && logoSrc && (
-        <div className="flex justify-center pb-1">
-          <motion.img
+      {/* Selected team logo preview */}
+      <div className="h-20 flex items-center justify-center">
+        {selected && logoSrc ? (
+          <motion.div
             key={selected}
-            src={logoSrc}
-            alt={`${selected} logo`}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="h-16 w-16 object-contain drop-shadow-md"
-          />
-        </div>
-      )}
+            className="relative group flex items-center justify-center"
+          >
+            <div className={`absolute inset-0 rounded-full blur-lg opacity-40 transition-opacity ${isHome ? "bg-chart-1/30" : "bg-chart-2/30"}`} />
+            <img
+              src={logoSrc}
+              alt={`${selected} logo`}
+              className="h-16 w-16 object-contain drop-shadow-md relative z-10"
+            />
+          </motion.div>
+        ) : selected ? (
+          <motion.div
+            key={selected}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className={`h-16 w-16 rounded-full border-2 border-dashed flex items-center justify-center font-black text-lg ${
+              isHome ? "border-chart-1/40 text-chart-1" : "border-chart-2/40 text-chart-2"
+            }`}
+          >
+            {selected.substring(0, 2).toUpperCase()}
+          </motion.div>
+        ) : (
+          <div className="h-16 w-16 rounded-full border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground/40 font-medium">
+            Select
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center justify-between gap-2">
         <Label className="text-[0.65rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
           {label}
         </Label>
         <span
-          className={`inline-flex items-center gap-1 text-[0.55rem] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+          className={`inline-flex items-center gap-1 text-[0.55rem] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${
             isHome
               ? "bg-chart-1/10 text-chart-3 border-chart-1/20"
               : "bg-chart-2/10 text-chart-2 border-chart-2/20"
@@ -73,36 +93,39 @@ export default memo(function TeamSelector({
 
       <Select value={selected} onValueChange={onChange} disabled={isLoading}>
         <SelectTrigger
-          className={`w-full h-10 text-sm bg-background/50 border transition-all hover:border-primary/30 focus:ring-1 ring-ring/20 rounded-lg ${
+          className={`w-full h-11 text-sm bg-background/60 backdrop-blur-sm border transition-all hover:border-primary/40 focus:ring-2 ring-primary/20 rounded-xl ${
             selected
-              ? isHome ? "border-chart-1/25" : "border-chart-2/25"
+              ? isHome ? "border-chart-1/40" : "border-chart-2/40"
               : ""
           }`}
         >
           <SelectValue placeholder="Select a team" />
         </SelectTrigger>
-        <SelectContent>
-          {teams.map((t) => (
-            <SelectItem key={t} value={t} className="cursor-pointer text-sm focus:bg-primary/10 focus:text-foreground">
-              {t}
-            </SelectItem>
-          ))}
+        <SelectContent className="max-h-72 rounded-xl">
+          {teams.map((t) => {
+            const itemLogo = getTeamLogo(t);
+            return (
+              <SelectItem
+                key={t}
+                value={t}
+                className="cursor-pointer text-sm py-2 focus:bg-primary/10 focus:text-foreground rounded-lg"
+              >
+                <div className="flex items-center gap-2.5">
+                  {itemLogo ? (
+                    <img src={itemLogo} alt="" className="h-5 w-5 object-contain shrink-0" />
+                  ) : (
+                    <span className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0 text-muted-foreground">
+                      {t.charAt(0)}
+                    </span>
+                  )}
+                  <span className="truncate font-medium">{t}</span>
+                </div>
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
-
-      {/* Fallback: text if no logo */}
-      {selected && !logoSrc && (
-        <div className="flex items-center gap-2">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 0.3 }}
-            className={`h-2 w-2 rounded-full shrink-0 ${isHome ? "bg-chart-1" : "bg-chart-2"}`}
-          />
-          <span className="text-sm font-semibold text-foreground/90 truncate">
-            {selected}
-          </span>
-        </div>
-      )}
     </motion.div>
   );
 });
+

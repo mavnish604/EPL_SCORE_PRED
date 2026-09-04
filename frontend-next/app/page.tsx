@@ -67,28 +67,66 @@ export default function Home() {
           className="mt-2 bg-card border border-border rounded-xl shadow-sm overflow-hidden"
         >
           <div className="p-5 sm:p-6">
-            <h2 className="text-center text-[0.65rem] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-5">
-              Match Setup
+            <h2 className="text-center text-[0.65rem] font-extrabold uppercase tracking-[0.25em] text-muted-foreground/80 mb-5">
+              Select Competition &amp; Teams
             </h2>
 
-            <div className="flex justify-center gap-4 mb-8">
-              <Button
-                variant={league === "epl" ? "default" : "outline"}
-                onClick={() => setLeague("epl")}
-                className="w-32"
-              >
-                Premier League
-              </Button>
-              <Button
-                variant={league === "laliga" ? "default" : "outline"}
-                onClick={() => setLeague("laliga")}
-                className="w-32"
-              >
-                La Liga
-              </Button>
+            {/* League Selection Switcher */}
+            <div className="flex justify-center mb-8">
+              <div className="inline-flex p-1.5 rounded-2xl bg-muted/70 border border-border/80 shadow-inner gap-3">
+                <button
+                  type="button"
+                  onClick={() => setLeague("epl")}
+                  title="Premier League"
+                  aria-label="Premier League"
+                  className={`flex items-center justify-center px-6 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    league === "epl"
+                      ? "bg-background shadow-md border border-primary/30 scale-[1.04] ring-2 ring-primary/20"
+                      : "opacity-60 hover:opacity-100 hover:bg-background/40"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/epl_white.png"
+                    alt="Premier League"
+                    className="h-8 sm:h-10 w-auto object-contain max-w-[130px] drop-shadow-md dark:block hidden"
+                  />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/epl_league.png"
+                    alt="Premier League"
+                    className="h-8 sm:h-10 w-auto object-contain max-w-[130px] drop-shadow-md dark:hidden block"
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLeague("laliga")}
+                  title="La Liga"
+                  aria-label="La Liga"
+                  className={`flex items-center justify-center px-6 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    league === "laliga"
+                      ? "bg-background shadow-md border border-primary/30 scale-[1.04] ring-2 ring-primary/20"
+                      : "opacity-60 hover:opacity-100 hover:bg-background/40"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/laliga_white.png"
+                    alt="La Liga"
+                    className="h-8 sm:h-10 w-auto object-contain max-w-[130px] drop-shadow-md dark:block hidden"
+                  />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/laliga_league.png"
+                    alt="La Liga"
+                    className="h-8 sm:h-10 w-auto object-contain max-w-[130px] drop-shadow-md dark:hidden block"
+                  />
+                </button>
+              </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">
+            <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] items-center">
               <TeamSelector
                 label="Home Team"
                 teams={teams}
@@ -98,8 +136,10 @@ export default function Home() {
                 side="home"
               />
 
-              <div className="flex items-center justify-center py-2 md:py-6">
-                <span className="text-lg font-bold text-muted-foreground/40">VS</span>
+              <div className="flex flex-col items-center justify-center py-2 md:py-6">
+                <div className="h-10 w-10 rounded-full bg-muted/60 border border-border/80 flex items-center justify-center shadow-inner">
+                  <span className="text-xs font-black text-muted-foreground">VS</span>
+                </div>
               </div>
 
               <TeamSelector
@@ -112,22 +152,22 @@ export default function Home() {
               />
             </div>
 
-            <div className="mt-6 flex justify-center">
+            <div className="mt-8 flex justify-center">
               <Button
                 size="lg"
                 onClick={predict}
                 disabled={loading || teamsLoading || !homeTeam || !awayTeam}
-                className="w-full sm:w-auto px-8 sm:px-14 py-5 text-sm sm:text-base tracking-[0.12em] uppercase font-bold shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all bg-primary text-primary-foreground border-none cursor-pointer rounded-lg"
+                className="w-full sm:w-auto px-10 sm:px-16 py-6 text-xs sm:text-sm tracking-[0.15em] uppercase font-black shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all bg-primary text-primary-foreground border-none cursor-pointer rounded-xl"
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Predicting...
+                    Calculating Probabilities...
                   </>
                 ) : (
                   <>
-                    Predict Result
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    Predict Fixture Result
+                    <ArrowRight className="ml-2.5 h-4 w-4" />
                   </>
                 )}
               </Button>
