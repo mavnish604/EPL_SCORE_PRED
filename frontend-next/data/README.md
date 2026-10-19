@@ -41,6 +41,16 @@ The EPL snapshot follows the next scheduled FPL gameweek's remaining fixtures.
 La Liga and UCL use the backend's upcoming three-day window; these can be partial
 rounds. A daily backend CSV may already include a fixture that has since started.
 
+A full future domestic round can also be saved directly from the FPL or ESPN
+schedule, recorded in `fixturesSource`, with individual model predictions from
+`predictionSource`. For these snapshots, scores use the API's `predicted_score`
+when supplied, otherwise its expected goals rounded to integers using the
+backend's ties-to-even convention. Those scores are applied to fresh ESPN
+standings. This allows the saved cards to move past the backend's cached fixture
+window. The regular refresh command still follows that backend window, so check
+its fixture dates before replacing a saved full round. UCL kickoff times are
+included when verified against the ESPN schedule.
+
 Create the snapshot once with `npm run snapshot:ucl`. If the file already exists,
 the command exits without contacting the backend.
 

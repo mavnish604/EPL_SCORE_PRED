@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-19T08:07:08.442Z",
+  "capturedAt": "2026-10-19T19:01:25.851Z",
   "source": "https://mavnish604-epl-backend.hf.space",
   "current": [
     {
@@ -874,109 +874,128 @@
       "homeTeam": "Fenerbahce",
       "awayTeam": "Slavia Prague",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-20T16:45:00.000Z"
     },
     {
       "homeTeam": "Sabah FK",
       "awayTeam": "Borussia Dortmund",
       "homeGoals": 2,
-      "awayGoals": 2
+      "awayGoals": 2,
+      "kickoffTime": "2026-10-20T16:45:00.000Z"
     },
     {
       "homeTeam": "AS Roma",
       "awayTeam": "Slovan Bratislava",
       "homeGoals": 3,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-20T19:00:00.000Z"
     },
     {
       "homeTeam": "FC Porto",
       "awayTeam": "PSV Eindhoven",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-20T19:00:00.000Z"
     },
     {
       "homeTeam": "Liverpool",
       "awayTeam": "Villarreal",
       "homeGoals": 1,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-20T19:00:00.000Z"
     },
     {
       "homeTeam": "Manchester City",
       "awayTeam": "AEK Athens",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-20T19:00:00.000Z"
     },
     {
       "homeTeam": "Napoli",
       "awayTeam": "Bodo/Glimt",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-20T19:00:00.000Z"
     },
     {
       "homeTeam": "Paris Saint-Germain",
       "awayTeam": "Barcelona",
       "homeGoals": 2,
-      "awayGoals": 2
+      "awayGoals": 2,
+      "kickoffTime": "2026-10-20T19:00:00.000Z"
     },
     {
       "homeTeam": "VfB Stuttgart",
       "awayTeam": "Atlético Madrid",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-20T19:00:00.000Z"
     },
     {
       "homeTeam": "Como",
       "awayTeam": "Manchester United",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-21T16:45:00.000Z"
     },
     {
       "homeTeam": "Lille",
       "awayTeam": "Galatasaray",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-21T16:45:00.000Z"
     },
     {
       "homeTeam": "Aston Villa",
       "awayTeam": "Viking FK",
       "homeGoals": 3,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-21T19:00:00.000Z"
     },
     {
       "homeTeam": "Bayern Munich",
       "awayTeam": "Arsenal",
       "homeGoals": 2,
-      "awayGoals": 2
+      "awayGoals": 2,
+      "kickoffTime": "2026-10-21T19:00:00.000Z"
     },
     {
       "homeTeam": "Club Brugge",
       "awayTeam": "Lens",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-21T19:00:00.000Z"
     },
     {
       "homeTeam": "Internazionale",
       "awayTeam": "Shakhtar Donetsk",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-21T19:00:00.000Z"
     },
     {
       "homeTeam": "Real Betis",
       "awayTeam": "Feyenoord Rotterdam",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-21T19:00:00.000Z"
     },
     {
       "homeTeam": "Real Madrid",
       "awayTeam": "RB Leipzig",
       "homeGoals": 5,
-      "awayGoals": 0
+      "awayGoals": 0,
+      "kickoffTime": "2026-10-21T19:00:00.000Z"
     },
     {
       "homeTeam": "Sporting CP",
       "awayTeam": "LASK Linz",
       "homeGoals": 2,
-      "awayGoals": 1
+      "awayGoals": 1,
+      "kickoffTime": "2026-10-21T19:00:00.000Z"
     }
-  ]
+  ],
+  "fixturesSource": "https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard?dates=2026&limit=1000"
 }

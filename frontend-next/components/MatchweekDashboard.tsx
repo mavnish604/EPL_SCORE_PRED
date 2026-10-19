@@ -36,17 +36,20 @@ function MatchCard({ fixture, index }: { fixture: SavedFixture; index: number })
 }
 
 export default function MatchweekDashboard({ league, onOpenLab }: { league: League; onOpenLab: () => void }) {
-  const [view, setView] = useState<"fixtures" | "current" | "predicted">("fixtures");
+  const snapshot = snapshots[league];
+  const [view, setView] = useState<"fixtures" | "current" | "predicted">(snapshot.fixtures.length ? "fixtures" : "current");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(false);
-  const snapshot = snapshots[league];
   const competition = competitions[league];
+  const gameweeks = new Set(snapshot.fixtures.map((fixture) => fixture.gameweek));
+  const gameweek = gameweeks.size === 1 ? snapshot.fixtures[0]?.gameweek : undefined;
+  const hasFixtures = snapshot.fixtures.length > 0;
   const query = search.trim().toLowerCase();
   const fixtures = snapshot.fixtures.filter((fixture) => `${fixture.homeTeam} ${fixture.awayTeam}`.toLowerCase().includes(query));
   const visible = expanded || query ? fixtures : fixtures.slice(0, 6);
   const currentRanks = new Map(snapshot.current.map((row) => [row.team, row.rank]));
   const rows = (view === "predicted" ? snapshot.predicted : snapshot.current).filter((row) => row.team.toLowerCase().includes(query));
-  const leader = snapshot.predicted[0];
+  const leader = hasFixtures ? snapshot.predicted[0] : snapshot.current[0];
   const movers = snapshot.predicted.filter((row) => (currentRanks.get(row.team) ?? row.rank) > row.rank).length;
   const totals = snapshot.fixtures.reduce((acc, match) => ({ goals: acc.goals + match.homeGoals + match.awayGoals, draws: acc.draws + Number(match.homeGoals === match.awayGoals) }), { goals: 0, draws: 0 });
 
@@ -54,7 +57,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
     <section aria-labelledby="matchweek-title" className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { label: "In the fixture window", value: String(snapshot.fixtures.length).padStart(2, "0"), detail: "matches", icon: CalendarDays },
+          { label: "Remaining fixtures", value: String(snapshot.fixtures.length).padStart(2, "0"), detail: "in this window", icon: CalendarDays },
           { label: "Projected goals", value: String(totals.goals).padStart(2, "0"), detail: `${totals.draws} predicted ${totals.draws === 1 ? "draw" : "draws"}`, icon: Trophy },
           { label: "Climbing the table", value: String(movers).padStart(2, "0"), detail: "clubs projected to rise", icon: ArrowUp },
         ].map((stat) => (
@@ -66,7 +69,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow mb-2">{competition.name}</p><h2 id="matchweek-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">The matchweek, mapped.</h2></div>
+        <div><p className="eyebrow mb-2">{competition.name}{gameweek != null && ` · Gameweek ${gameweek}`}</p><h2 id="matchweek-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">The matchweek, mapped.</h2><p className="mt-2 text-xs text-muted-foreground">{hasFixtures ? `${snapshot.fixtures.length} ${snapshot.fixtures.length === 1 ? "fixture remains" : "fixtures remain"} in this saved window.` : "No fixtures remain in this saved window. View the latest saved standings below."}</p></div>
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock3 aria-hidden="true" className="h-3 w-3" /> Saved <time dateTime={snapshot.capturedAt}>{formatSnapshotDate(snapshot.capturedAt)}</time></p>
       </div>
 
@@ -100,7 +103,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
         <button onClick={onOpenLab} className="flex items-center gap-2 text-xs font-semibold text-primary">Build your own matchup <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" /></button>
       </div>
 
-      {leader && <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-border bg-card/60 px-6 py-5"><div className="flex items-center gap-4"><TeamCrest team={leader.team} className="h-11 w-11" /><div><p className="eyebrow mb-1">Projected leader</p><p className="text-base font-semibold">{leader.team}</p></div></div><p className="flex items-baseline gap-2"><span className="text-3xl font-semibold tracking-tight">{leader.points}</span><span className="text-xs text-muted-foreground">points after this window</span></p></div>}
+      {leader && <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-border bg-card/60 px-6 py-5"><div className="flex items-center gap-4"><TeamCrest team={leader.team} className="h-11 w-11" /><div><p className="eyebrow mb-1">{hasFixtures ? "Projected leader" : "Current leader"}</p><p className="text-base font-semibold">{leader.team}</p></div></div><p className="flex items-baseline gap-2"><span className="text-3xl font-semibold tracking-tight">{leader.points}</span><span className="text-xs text-muted-foreground">{hasFixtures ? "points after this window" : "points"}</span></p></div>}
     </section>
   );
 }

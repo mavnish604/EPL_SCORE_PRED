@@ -24,6 +24,8 @@ export interface MatchweekSnapshot {
   capturedAt: string;
   source: string;
   standingsSource?: string;
+  fixturesSource?: string;
+  predictionSource?: string;
   current: Standing[];
   predicted: Standing[];
   fixtures: SavedFixture[];
