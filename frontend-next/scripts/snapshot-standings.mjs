@@ -17,6 +17,33 @@ const leagues = requested ? [requested] : ["epl", "laliga", "ucl"];
 if (leagues.some((league) => !["epl", "laliga", "ucl"].includes(league))) throw new Error("Unknown competition.");
 const fields = ["rank", "played", "won", "drawn", "lost", "goals_for", "goals_against", "goal_difference", "points"];
 const laligaStandingsSource = "https://site.api.espn.com/apis/v2/sports/soccer/esp.1/standings";
+const uclScoreboardSource = "https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard?dates=2026&limit=1000";
+
+async function enrichUclKickoffTimes(fixtures) {
+  try {
+    const response = await fetch(uclScoreboardSource, { cache: "no-store", signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) return fixtures;
+    const data = await response.json();
+    const key = (name) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const map = new Map();
+    for (const event of data.events || []) {
+      const comp = event.competitions?.[0];
+      const home = comp?.competitors?.find((c) => c.homeAway === "home")?.team?.displayName;
+      const away = comp?.competitors?.find((c) => c.homeAway === "away")?.team?.displayName;
+      if (home && away) {
+        map.set(`${key(home)}_${key(away)}`, event.date);
+      }
+    }
+    return fixtures.map((f) => {
+      const k = `${key(f.homeTeam)}_${key(f.awayTeam)}`;
+      const kickoffTime = map.get(k);
+      return kickoffTime ? { ...f, kickoffTime } : f;
+    });
+  } catch (e) {
+    console.warn("Could not enrich UCL kickoff times from ESPN:", e.message);
+    return fixtures;
+  }
+}
 
 async function loadFreshLaligaStandings() {
   console.log("Fetching fresh La Liga standings from ESPN…");
@@ -60,7 +87,18 @@ for (const league of leagues) {
       predicted = projectStandings(current, fixtures);
       buildFixtureResults(fixtures.map((match) => ({ home_team_name: match.homeTeam, away_team_name: match.awayTeam })), current, predicted);
     }
-    const snapshot = { capturedAt: new Date().toISOString(), source: origin, ...(league === "laliga" ? { standingsSource: laligaStandingsSource } : {}), current, predicted, fixtures };
+    if (league === "ucl") {
+      fixtures = await enrichUclKickoffTimes(fixtures);
+    }
+    const snapshot = {
+      capturedAt: new Date().toISOString(),
+      source: origin,
+      ...(league === "laliga" ? { standingsSource: laligaStandingsSource } : {}),
+      ...(league === "ucl" && fixtures.some((f) => f.kickoffTime) ? { fixturesSource: uclScoreboardSource } : {}),
+      current,
+      predicted,
+      fixtures,
+    };
     await mkdir(new URL("data/", root), { recursive: true });
     const temporary = new URL(`data/${league}-standings.json.tmp`, root);
     await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`);

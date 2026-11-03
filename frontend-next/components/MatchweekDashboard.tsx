@@ -9,40 +9,61 @@ import TeamCrest from "@/components/TeamCrest";
 
 const columns = [["played", "P", "Played"], ["won", "W", "Won"], ["drawn", "D", "Drawn"], ["lost", "L", "Lost"], ["goals_for", "GF", "Goals for"], ["goals_against", "GA", "Goals against"], ["goal_difference", "GD", "Goal difference"], ["points", "Pts", "Points"]] as const;
 
-function MatchCard({ fixture, index }: { fixture: SavedFixture; index: number }) {
+function MatchCard({ fixture, index, onOpenLab }: { fixture: SavedFixture; index: number; onOpenLab?: (home: string, away: string) => void }) {
   const { homeTeam, awayTeam, homeGoals, awayGoals, kickoffTime } = fixture;
   const drawn = homeGoals === awayGoals;
   return (
-    <article className="match-card relative overflow-hidden rounded-2xl border border-border bg-card" aria-label={`${homeTeam} versus ${awayTeam}, predicted score ${homeGoals} to ${awayGoals}`}>
-      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        <span className="flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="h-3 w-3" />{kickoffTime ? <time dateTime={kickoffTime}>{new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(kickoffTime))} UTC</time> : `Fixture ${String(index + 1).padStart(2, "0")}`}</span>
-        <span className="text-primary">Prediction</span>
-      </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 px-4 pb-6 pt-7">
-        {[homeTeam, awayTeam].map((team, side) => (
-          <div key={side} className={`flex min-w-0 flex-col items-center gap-3 text-center ${side === 1 ? "col-start-3 row-start-1" : ""}`}>
-            <div className="crest-plinth flex h-20 w-20 items-center justify-center rounded-full"><TeamCrest team={team} className="h-12 w-12" /></div>
-            <p className={`max-w-[140px] text-xs leading-snug sm:text-sm ${side === 0 ? homeGoals >= awayGoals ? "font-bold" : "text-muted-foreground" : awayGoals >= homeGoals ? "font-bold" : "text-muted-foreground"}`}>{team}</p>
+    <article className="match-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-sm" aria-label={`${homeTeam} versus ${awayTeam}, predicted score ${homeGoals} to ${awayGoals}`}>
+      <div>
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="h-3 w-3" />{kickoffTime ? <time dateTime={kickoffTime}>{new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(kickoffTime))} UTC</time> : `Fixture ${String(index + 1).padStart(2, "0")}`}</span>
+          <span className="font-semibold text-primary">Prediction</span>
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 px-4 pb-6 pt-7">
+          {[homeTeam, awayTeam].map((team, side) => (
+            <div key={side} className={`flex min-w-0 flex-col items-center gap-3 text-center ${side === 1 ? "col-start-3 row-start-1" : ""}`}>
+              <div className="crest-plinth flex h-20 w-20 items-center justify-center rounded-full"><TeamCrest team={team} className="h-12 w-12" /></div>
+              <p className={`max-w-[140px] text-xs leading-snug sm:text-sm ${side === 0 ? homeGoals >= awayGoals ? "font-bold" : "text-muted-foreground" : awayGoals >= homeGoals ? "font-bold" : "text-muted-foreground"}`}>{team}</p>
+            </div>
+          ))}
+          <div className="col-start-2 row-start-1 flex flex-col items-center gap-2 pt-5">
+            <p aria-hidden="true" className="flex items-center gap-2 text-4xl font-bold tracking-tighter tabular-nums"><span>{homeGoals}</span><span className="text-lg font-normal text-muted-foreground/40">—</span><span>{awayGoals}</span></p>
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{drawn ? "Draw" : homeGoals > awayGoals ? "Home win" : "Away win"}</span>
           </div>
-        ))}
-        <div className="col-start-2 row-start-1 flex flex-col items-center gap-2 pt-5">
-          <p aria-hidden="true" className="flex items-center gap-2 text-4xl font-bold tracking-tighter tabular-nums"><span>{homeGoals}</span><span className="text-lg font-normal text-muted-foreground/40">—</span><span>{awayGoals}</span></p>
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{drawn ? "Draw" : homeGoals > awayGoals ? "Home win" : "Away win"}</span>
         </div>
       </div>
-      <div aria-hidden="true" className="h-0.5 bg-gradient-to-r from-primary/60 via-primary/10 to-transparent" />
+      <div>
+        {onOpenLab && (
+          <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2.5">
+            <span className="text-[10px] text-muted-foreground">Detailed simulation</span>
+            <button
+              type="button"
+              onClick={() => onOpenLab(homeTeam, awayTeam)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary transition-colors hover:text-primary/80"
+            >
+              Analyze in Lab <ArrowRight aria-hidden="true" className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+        <div aria-hidden="true" className="h-0.5 bg-gradient-to-r from-primary/60 via-primary/10 to-transparent" />
+      </div>
     </article>
   );
 }
 
-export default function MatchweekDashboard({ league, onOpenLab }: { league: League; onOpenLab: () => void }) {
+export default function MatchweekDashboard({ league, onOpenLab }: { league: League; onOpenLab?: (homeTeam?: string, awayTeam?: string) => void }) {
   const snapshot = snapshots[league];
   const [view, setView] = useState<"fixtures" | "current" | "predicted">(snapshot.fixtures.length ? "fixtures" : "current");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(false);
   const competition = competitions[league];
-  const gameweeks = new Set(snapshot.fixtures.map((fixture) => fixture.gameweek));
+  const gameweeks = new Set(snapshot.fixtures.map((fixture) => fixture.gameweek).filter((gw) => gw != null));
   const gameweek = gameweeks.size === 1 ? snapshot.fixtures[0]?.gameweek : undefined;
+  const roundLabel = gameweek != null
+    ? `Gameweek ${gameweek}`
+    : league === "ucl"
+      ? `League Phase · Matchday ${snapshot.current[0]?.played ? snapshot.current[0].played + 1 : 4}`
+      : `Matchday ${snapshot.current[0]?.played ? snapshot.current[0].played + 1 : 12}`;
   const hasFixtures = snapshot.fixtures.length > 0;
   const query = search.trim().toLowerCase();
   const fixtures = snapshot.fixtures.filter((fixture) => `${fixture.homeTeam} ${fixture.awayTeam}`.toLowerCase().includes(query));
@@ -69,7 +90,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow mb-2">{competition.name}{gameweek != null && ` · Gameweek ${gameweek}`}</p><h2 id="matchweek-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">The matchweek, mapped.</h2><p className="mt-2 text-xs text-muted-foreground">{hasFixtures ? `${snapshot.fixtures.length} ${snapshot.fixtures.length === 1 ? "fixture remains" : "fixtures remain"} in this saved window.` : "No fixtures remain in this saved window. View the latest saved standings below."}</p></div>
+        <div><p className="eyebrow mb-2">{competition.name}{roundLabel && ` · ${roundLabel}`}</p><h2 id="matchweek-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">The matchweek, mapped.</h2><p className="mt-2 text-xs text-muted-foreground">{hasFixtures ? `${snapshot.fixtures.length} ${snapshot.fixtures.length === 1 ? "fixture remains" : "fixtures remain"} in this saved window.` : "No fixtures remain in this saved window. View the latest saved standings below."}</p></div>
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock3 aria-hidden="true" className="h-3 w-3" /> Saved <time dateTime={snapshot.capturedAt}>{formatSnapshotDate(snapshot.capturedAt)}</time></p>
       </div>
 
@@ -82,7 +103,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
 
       {view === "fixtures" ? (
         <>
-          {visible.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visible.map((fixture, index) => <MatchCard key={`${fixture.homeTeam}-${fixture.awayTeam}`} fixture={fixture} index={index} />)}</div> : <p role="status" className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">{query ? "No matches for that club." : "No upcoming fixtures in this snapshot."}</p>}
+          {visible.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visible.map((fixture, index) => <MatchCard key={`${fixture.homeTeam}-${fixture.awayTeam}`} fixture={fixture} index={index} onOpenLab={onOpenLab} />)}</div> : <p role="status" className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">{query ? "No matches for that club." : "No upcoming fixtures in this snapshot."}</p>}
           {!query && fixtures.length > 6 && <div className="text-center"><button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="inline-flex items-center gap-2 rounded-xl border border-border px-5 py-3 text-xs font-semibold hover:bg-card">{expanded ? "Show fewer matches" : `View all ${fixtures.length} matches`}{expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}</button></div>}
         </>
       ) : (
@@ -100,7 +121,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <p className="max-w-lg text-[11px] leading-relaxed text-muted-foreground">{view === "fixtures" ? "Saved model projections for the upcoming fixture window. Kickoff times, where available, are UTC." : "Sorted by points, goal difference, then goals scored. Full competition tiebreaks are excluded."}</p>
-        <button onClick={onOpenLab} className="flex items-center gap-2 text-xs font-semibold text-primary">Build your own matchup <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" /></button>
+        <button onClick={() => onOpenLab?.()} className="flex items-center gap-2 text-xs font-semibold text-primary">Build your own matchup <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" /></button>
       </div>
 
       {leader && <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-border bg-card/60 px-6 py-5"><div className="flex items-center gap-4"><TeamCrest team={leader.team} className="h-11 w-11" /><div><p className="eyebrow mb-1">{hasFixtures ? "Projected leader" : "Current leader"}</p><p className="text-base font-semibold">{leader.team}</p></div></div><p className="flex items-baseline gap-2"><span className="text-3xl font-semibold tracking-tight">{leader.points}</span><span className="text-xs text-muted-foreground">{hasFixtures ? "points after this window" : "points"}</span></p></div>}

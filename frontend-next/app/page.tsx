@@ -47,7 +47,17 @@ export default function Home() {
           <span className="hidden pb-4 text-[10px] uppercase tracking-widest text-muted-foreground sm:block">{competitions[league].region} / {competitions[league].code}</span>
         </div>
 
-        {workspace === "matchweek" ? <MatchweekDashboard key={league} league={league} onOpenLab={() => setWorkspace("lab")} /> : (
+        {workspace === "matchweek" ? (
+          <MatchweekDashboard
+            key={league}
+            league={league}
+            onOpenLab={(home?: string, away?: string) => {
+              if (home) setHomeTeam(home);
+              if (away) setAwayTeam(away);
+              setWorkspace("lab");
+            }}
+          />
+        ) : (
           <div className="space-y-6">
             <div className="flex items-end justify-between gap-4"><div><p className="eyebrow mb-2">Your teams. Your fixture.</p><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Build the matchup.</h2></div><ArrowUpRight aria-hidden="true" className="h-7 w-7 text-primary" /></div>
             <section aria-label="Match setup" className="overflow-hidden rounded-3xl border border-border bg-card">
