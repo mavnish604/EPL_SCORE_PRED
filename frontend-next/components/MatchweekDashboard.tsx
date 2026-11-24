@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, Minus, RefreshCw, RotateCcw, Search, Trophy, X } from "lucide-react";
 import TeamCrest from "@/components/TeamCrest";
+import { useLiveScores } from "@/hooks/useLiveScores";
 import { calculateClinchStatus, calculateMatchInsights, simulateStandings } from "@/lib/analytics";
 import { fetchFixtures, fetchPrediction, fetchStandings, type LiveFixture } from "@/lib/api/predictor";
+import type { LiveMatchScore } from "@/lib/liveScores";
 import { competitions } from "@/lib/competitions";
 import { getUclFixtureLeague } from "@/lib/uclFixtureLeagues";
 import type { League, PredictionResult } from "@/types/prediction";
@@ -21,6 +23,7 @@ function FixtureCard({
   league,
   homeRank,
   awayRank,
+  liveScore,
   onOpenLab,
   simulatedOutcome,
   onSimulate,
@@ -30,6 +33,7 @@ function FixtureCard({
   league: League;
   homeRank?: number;
   awayRank?: number;
+  liveScore?: LiveMatchScore | null;
   onOpenLab?: (home?: string, away?: string) => void;
   simulatedOutcome?: "home" | "draw" | "away";
   onSimulate?: (outcome?: "home" | "draw" | "away") => void;
@@ -74,12 +78,26 @@ function FixtureCard({
     <article className="match-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-sm">
       <div>
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <CalendarDays aria-hidden="true" className="h-3 w-3" />
-            {match.kickoff_time && !Number.isNaN(Date.parse(match.kickoff_time))
-              ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(match.kickoff_time)) + " UTC"
-              : `Fixture ${String(index + 1).padStart(2, "0")}`}
-          </span>
+          {liveScore?.isLive ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+              </span>
+              LIVE {liveScore.clock}
+            </span>
+          ) : liveScore?.isFinished ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/70 px-2 py-0.5 text-[9px] font-bold text-muted-foreground">
+              FT · Full Time
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <CalendarDays aria-hidden="true" className="h-3 w-3" />
+              {match.kickoff_time && !Number.isNaN(Date.parse(match.kickoff_time))
+                ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(match.kickoff_time)) + " UTC"
+                : `Fixture ${String(index + 1).padStart(2, "0")}`}
+            </span>
+          )}
           {insights?.isUpsetAlert ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
               🚨 Upset Alert
@@ -102,9 +120,28 @@ function FixtureCard({
           </div>
 
           <div className="flex flex-col items-center justify-center">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border/80 bg-muted/60 text-[10px] font-bold tracking-wider text-muted-foreground shadow-2xs">
-              VS
-            </span>
+            {liveScore && (liveScore.isLive || liveScore.isFinished) ? (
+              <div className="flex flex-col items-center">
+                <div className="flex items-baseline gap-1.5 text-2xl sm:text-3xl font-black tabular-nums tracking-tight">
+                  <span className={liveScore.isLive ? "text-red-600 dark:text-red-400" : "text-foreground"}>
+                    {liveScore.homeScore}
+                  </span>
+                  <span className="text-muted-foreground/40 text-lg">–</span>
+                  <span className={liveScore.isLive ? "text-red-600 dark:text-red-400" : "text-foreground"}>
+                    {liveScore.awayScore}
+                  </span>
+                </div>
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                  liveScore.isLive ? "text-red-500 animate-pulse" : "text-muted-foreground"
+                }`}>
+                  {liveScore.isLive ? liveScore.clock : "Final"}
+                </span>
+              </div>
+            ) : (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border/80 bg-muted/60 text-[10px] font-bold tracking-wider text-muted-foreground shadow-2xs">
+                VS
+              </span>
+            )}
           </div>
 
           <div className="flex min-w-0 flex-col items-center gap-2 text-center">
@@ -437,6 +474,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
   const [fixtures, setFixtures] = useState<Resource<LiveFixture[]>>(pending);
   const [simulations, setSimulations] = useState<Map<number, "home" | "draw" | "away">>(new Map());
   const [showPopup, setShowPopup] = useState(false);
+  const { findScore } = useLiveScores(league);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -603,6 +641,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
                   league={league}
                   homeRank={currentRanks.get(match.home_team_name)}
                   awayRank={currentRanks.get(match.away_team_name)}
+                  liveScore={findScore(match.home_team_name, match.away_team_name)}
                   onOpenLab={onOpenLab}
                   simulatedOutcome={simulations.get(index)}
                   onSimulate={(outcome) => handleSimulate(index, outcome)}
