@@ -46,6 +46,29 @@ test("backend detail messages reach the frontend", async () => {
   await assert.rejects(() => api.fetchTeams("epl"), /Fixture teams do not match the standings/);
 });
 
+test("standings and fixtures use the league routes outside /api", async () => {
+  for (const league of ["epl", "laliga", "ucl"]) {
+    const { api, calls } = client("https://backend.example/api", []);
+    await api.fetchStandings(league, true);
+    await api.fetchStandings(league, false);
+    await api.fetchFixtures(league);
+    assert.deepEqual(calls.map(({ url }) => url), [
+      `https://backend.example/${league}/predicted_table`,
+      `https://backend.example/${league}/standings`,
+      `https://backend.example/${league}/get_fixtures`,
+    ]);
+  }
+});
+
+test("UCL fixture leagues do not guess when a club is unknown", async () => {
+  const source = await readFile(new URL("../lib/uclFixtureLeagues.ts", import.meta.url), "utf8");
+  const exports = {};
+  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports });
+  assert.equal(exports.getUclFixtureLeague("Bodo/Glimt"), "norway");
+  assert.equal(exports.getUclFixtureLeague("PSV Eindhoven"), "netherlands");
+  assert.equal(exports.getUclFixtureLeague("Unknown FC"), undefined);
+});
+
 test("updated UCL form inputs stay distinct from the original venue averages", async () => {
   const { api, calls } = client("https://backend.example", {
     home_team: "Real Madrid", away_team: "RB Leipzig", predicted_score: "5-0",
@@ -67,15 +90,13 @@ test("updated UCL form inputs stay distinct from the original venue averages", a
   assert.equal(calls[0].options.cache, "no-store");
 });
 
-test("new UCL clubs select their actual domestic leagues and remain featured", async () => {
+test("UCL clubs select their actual domestic leagues", async () => {
   const source = await readFile(new URL("../lib/domesticLeagues.ts", import.meta.url), "utf8");
-  const snapshot = JSON.parse(await readFile(new URL("../data/ucl-standings.json", import.meta.url), "utf8"));
   const exports = {};
   vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, {
-    exports, require: () => snapshot,
+    exports,
   });
   for (const [team, league] of [["Como", "italy"], ["RC Lens", "france"], ["LASK", "austria"], ["Sabah", "azerbaijan"], ["Viking FK", "norway"], ["Bodo/Glimt", "norway"]]) {
     assert.equal(exports.getDefaultDomesticLeague(team), league, team);
-    assert.ok(exports.UCL_CURRENT_SEASON_TEAMS.includes(team), `${team} should be featured`);
   }
 });

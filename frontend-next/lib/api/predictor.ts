@@ -1,4 +1,5 @@
 import type { League, PredictionResult, UCLDomesticForm } from "@/types/prediction";
+import type { Standing } from "@/types/standings";
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "").replace(/\/api$/, "");
 const API_BASE = `${API_ORIGIN}/api`;
@@ -35,6 +36,23 @@ async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> 
   }
 
   return response.json() as Promise<T>;
+}
+
+export interface LiveFixture {
+  home_teams: string;
+  away_teams: string;
+  home_team_name: string;
+  away_team_name: string;
+  kickoff_time?: string | null;
+  gameweek?: number | null;
+}
+
+export function fetchStandings(league: League, predicted: boolean, signal?: AbortSignal): Promise<Standing[]> {
+  return fetchJson<Standing[]>(`${API_ORIGIN}/${league}/${predicted ? "predicted_table" : "standings"}`, { signal });
+}
+
+export function fetchFixtures(league: League, signal?: AbortSignal): Promise<LiveFixture[]> {
+  return fetchJson<LiveFixture[]>(`${API_ORIGIN}/${league}/get_fixtures`, { signal });
 }
 
 export async function fetchTeams(league: League = "epl"): Promise<string[]> {
@@ -75,7 +93,8 @@ export async function fetchPrediction(
   away_team: string,
   league: League = "epl",
   home_league?: string,
-  away_league?: string
+  away_league?: string,
+  signal?: AbortSignal
 ): Promise<PredictionResult> {
   const isUcl = league === "ucl";
   const endpoint = isUcl ? `${API_BASE}/ucl/predict` : `${API_BASE}/${league}/predict`;
@@ -95,6 +114,7 @@ export async function fetchPrediction(
   const raw = await fetchJson<RawPredictionResponse>(endpoint, {
     method: "POST",
     body: JSON.stringify(body),
+    signal,
   });
 
   // Normalize form structure between UCL and EPL/LaLiga

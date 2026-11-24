@@ -1,46 +1,155 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, Clock3, Minus, Search, Trophy } from "lucide-react";
-import { competitions, formatSnapshotDate, snapshots } from "@/lib/competitions";
-import type { League } from "@/types/prediction";
-import type { SavedFixture } from "@/types/standings";
+import { useEffect, useState } from "react";
+import { ArrowDown, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, Minus, RefreshCw, Search, Trophy } from "lucide-react";
 import TeamCrest from "@/components/TeamCrest";
+import { fetchFixtures, fetchPrediction, fetchStandings, type LiveFixture } from "@/lib/api/predictor";
+import { competitions } from "@/lib/competitions";
+import { getUclFixtureLeague } from "@/lib/uclFixtureLeagues";
+import type { League, PredictionResult } from "@/types/prediction";
+import type { Standing } from "@/types/standings";
 
+type View = "fixtures" | "current" | "predicted";
+type Resource<T> = { data: T | null; error: string | null; loading: boolean };
+const pending = <T,>(): Resource<T> => ({ data: null, error: null, loading: true });
 const columns = [["played", "P", "Played"], ["won", "W", "Won"], ["drawn", "D", "Drawn"], ["lost", "L", "Lost"], ["goals_for", "GF", "Goals for"], ["goals_against", "GA", "Goals against"], ["goal_difference", "GD", "Goal difference"], ["points", "Pts", "Points"]] as const;
 
-function MatchCard({ fixture, index, onOpenLab }: { fixture: SavedFixture; index: number; onOpenLab?: (home: string, away: string) => void }) {
-  const { homeTeam, awayTeam, homeGoals, awayGoals, kickoffTime } = fixture;
-  const drawn = homeGoals === awayGoals;
+function FixtureCard({ match, index, league, onOpenLab }: { match: LiveFixture; index: number; league: League; onOpenLab?: (home?: string, away?: string) => void }) {
+  const [prediction, setPrediction] = useState<PredictionResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const homeLeague = league === "ucl" ? getUclFixtureLeague(match.home_teams) : undefined;
+    const awayLeague = league === "ucl" ? getUclFixtureLeague(match.away_teams) : undefined;
+    if (league === "ucl" && (!homeLeague || !awayLeague)) {
+      Promise.resolve().then(() => {
+        if (!controller.signal.aborted) {
+          setError("Choose the clubs’ domestic leagues in the match lab to predict this fixture.");
+          setLoading(false);
+        }
+      });
+    } else {
+      fetchPrediction(match.home_teams, match.away_teams, league, homeLeague, awayLeague, controller.signal)
+        .then((result) => { if (!controller.signal.aborted) setPrediction(result); })
+        .catch((err: unknown) => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Could not predict this fixture."); })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    }
+    return () => controller.abort();
+  }, [league, match.home_teams, match.away_teams, attempt]);
+
+  const homeProb = prediction?.home_win_prob ?? 0;
+  const drawProb = prediction?.draw_prob ?? 0;
+  const awayProb = prediction?.away_win_prob ?? 0;
+  const maxProb = Math.max(homeProb, drawProb, awayProb);
+
   return (
-    <article className="match-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-sm" aria-label={`${homeTeam} versus ${awayTeam}, predicted score ${homeGoals} to ${awayGoals}`}>
+    <article className="match-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-sm">
       <div>
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          <span className="flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="h-3 w-3" />{kickoffTime ? <time dateTime={kickoffTime}>{new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(kickoffTime))} UTC</time> : `Fixture ${String(index + 1).padStart(2, "0")}`}</span>
-          <span className="font-semibold text-primary">Prediction</span>
+          <span className="flex items-center gap-1.5">
+            <CalendarDays aria-hidden="true" className="h-3 w-3" />
+            {match.kickoff_time && !Number.isNaN(Date.parse(match.kickoff_time))
+              ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(match.kickoff_time)) + " UTC"
+              : `Fixture ${String(index + 1).padStart(2, "0")}`}
+          </span>
+          <span className="font-semibold text-primary">Win Probability</span>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 px-4 pb-6 pt-7">
-          {[homeTeam, awayTeam].map((team, side) => (
-            <div key={side} className={`flex min-w-0 flex-col items-center gap-3 text-center ${side === 1 ? "col-start-3 row-start-1" : ""}`}>
-              <div className="crest-plinth flex h-20 w-20 items-center justify-center rounded-full"><TeamCrest team={team} className="h-12 w-12" /></div>
-              <p className={`max-w-[140px] text-xs leading-snug sm:text-sm ${side === 0 ? homeGoals >= awayGoals ? "font-bold" : "text-muted-foreground" : awayGoals >= homeGoals ? "font-bold" : "text-muted-foreground"}`}>{team}</p>
+
+        {/* Team Matchup with Crests */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pt-6 pb-4">
+          <div className="flex min-w-0 flex-col items-center gap-2 text-center">
+            <div className="crest-plinth flex h-16 w-16 items-center justify-center rounded-full border border-border/40 shadow-2xs sm:h-18 sm:w-18">
+              <TeamCrest team={match.home_team_name} className="h-10 w-10 sm:h-11 sm:w-11" />
             </div>
-          ))}
-          <div className="col-start-2 row-start-1 flex flex-col items-center gap-2 pt-5">
-            <p aria-hidden="true" className="flex items-center gap-2 text-4xl font-bold tracking-tighter tabular-nums"><span>{homeGoals}</span><span className="text-lg font-normal text-muted-foreground/40">—</span><span>{awayGoals}</span></p>
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{drawn ? "Draw" : homeGoals > awayGoals ? "Home win" : "Away win"}</span>
+            <p className="line-clamp-2 max-w-[130px] text-xs font-semibold leading-snug sm:text-sm">{match.home_team_name}</p>
+          </div>
+
+          <div className="flex flex-col items-center justify-center">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border/80 bg-muted/60 text-[10px] font-bold tracking-wider text-muted-foreground shadow-2xs">
+              VS
+            </span>
+          </div>
+
+          <div className="flex min-w-0 flex-col items-center gap-2 text-center">
+            <div className="crest-plinth flex h-16 w-16 items-center justify-center rounded-full border border-border/40 shadow-2xs sm:h-18 sm:w-18">
+              <TeamCrest team={match.away_team_name} className="h-10 w-10 sm:h-11 sm:w-11" />
+            </div>
+            <p className="line-clamp-2 max-w-[130px] text-xs font-semibold leading-snug sm:text-sm">{match.away_team_name}</p>
           </div>
         </div>
+
+        {/* Win Probability Bar and Badges */}
+        <div className="px-4 pb-4">
+          {prediction ? (
+            <div className="rounded-xl border border-border/70 bg-muted/25 p-3">
+              {/* Segmented Probability Bar */}
+              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted/70 p-0.5 gap-0.5">
+                <div
+                  className="rounded-l-full bg-primary transition-all duration-500"
+                  style={{ width: `${homeProb}%` }}
+                  title={`Home win: ${homeProb}%`}
+                />
+                <div
+                  className="bg-muted-foreground/35 transition-all duration-500"
+                  style={{ width: `${drawProb}%` }}
+                  title={`Draw: ${drawProb}%`}
+                />
+                <div
+                  className="rounded-r-full bg-chart-1 transition-all duration-500"
+                  style={{ width: `${awayProb}%` }}
+                  title={`Away win: ${awayProb}%`}
+                />
+              </div>
+
+              {/* Outcome Badges */}
+              <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center">
+                <div className={`rounded-lg py-1.5 px-1 border transition-all ${homeProb === maxProb ? "border-primary/40 bg-primary/10" : "border-border/40 bg-background/50"}`}>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Home</p>
+                  <p className={`text-sm font-bold tabular-nums ${homeProb === maxProb ? "text-primary font-extrabold" : "text-foreground"}`}>{homeProb}%</p>
+                </div>
+                <div className={`rounded-lg py-1.5 px-1 border transition-all ${drawProb === maxProb ? "border-border/80 bg-muted/80" : "border-border/40 bg-background/50"}`}>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Draw</p>
+                  <p className={`text-sm font-bold tabular-nums ${drawProb === maxProb ? "text-foreground font-extrabold" : "text-muted-foreground"}`}>{drawProb}%</p>
+                </div>
+                <div className={`rounded-lg py-1.5 px-1 border transition-all ${awayProb === maxProb ? "border-chart-1/40 bg-chart-1/10" : "border-border/40 bg-background/50"}`}>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Away</p>
+                  <p className={`text-sm font-bold tabular-nums ${awayProb === maxProb ? "text-chart-1 font-extrabold" : "text-foreground"}`}>{awayProb}%</p>
+                </div>
+              </div>
+            </div>
+          ) : loading ? (
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3 animate-pulse">
+              <div className="h-2.5 w-full rounded-full bg-muted/60" />
+              <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+                <div className="h-11 rounded-lg bg-muted/40" />
+                <div className="h-11 rounded-lg bg-muted/40" />
+                <div className="h-11 rounded-lg bg-muted/40" />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
+              Prediction unavailable
+            </div>
+          )}
+        </div>
+
+        {prediction && (prediction.form.home.is_fallback || prediction.form.away.is_fallback) && (
+          <p className="px-4 pb-3 text-center text-[10px] text-muted-foreground">Limited form data; this prediction uses fallback values.</p>
+        )}
+        {error && (
+          <div role="alert" className="px-4 pb-4 text-center text-xs text-destructive">
+            {error} <button type="button" onClick={() => { setError(null); setLoading(true); setAttempt((value) => value + 1); }} className="font-semibold underline">Retry</button>
+          </div>
+        )}
       </div>
       <div>
         {onOpenLab && (
           <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2.5">
             <span className="text-[10px] text-muted-foreground">Detailed simulation</span>
-            <button
-              type="button"
-              onClick={() => onOpenLab(homeTeam, awayTeam)}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary transition-colors hover:text-primary/80"
-            >
+            <button type="button" onClick={() => onOpenLab(match.home_teams, match.away_teams)} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary transition-colors hover:text-primary/80">
               Analyze in Lab <ArrowRight aria-hidden="true" className="h-3 w-3" />
             </button>
           </div>
@@ -51,80 +160,66 @@ function MatchCard({ fixture, index, onOpenLab }: { fixture: SavedFixture; index
   );
 }
 
-export default function MatchweekDashboard({ league, onOpenLab }: { league: League; onOpenLab?: (homeTeam?: string, awayTeam?: string) => void }) {
-  const snapshot = snapshots[league];
-  const [view, setView] = useState<"fixtures" | "current" | "predicted">(snapshot.fixtures.length ? "fixtures" : "current");
+export default function MatchweekDashboard({ league, onOpenLab }: { league: League; onOpenLab?: (home?: string, away?: string) => void }) {
+  const [view, setView] = useState<View>("fixtures");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(false);
-  const competition = competitions[league];
-  const gameweeks = new Set(snapshot.fixtures.map((fixture) => fixture.gameweek).filter((gw) => gw != null));
-  const gameweek = gameweeks.size === 1 ? snapshot.fixtures[0]?.gameweek : undefined;
-  const roundLabel = gameweek != null
-    ? `Gameweek ${gameweek}`
-    : league === "ucl"
-      ? `League Phase · Matchday ${snapshot.current[0]?.played ? snapshot.current[0].played + 1 : 4}`
-      : `Matchday ${snapshot.current[0]?.played ? snapshot.current[0].played + 1 : 12}`;
-  const hasFixtures = snapshot.fixtures.length > 0;
+  const [revision, setRevision] = useState(0);
+  const [current, setCurrent] = useState<Resource<Standing[]>>(pending);
+  const [predicted, setPredicted] = useState<Resource<Standing[]>>(pending);
+  const [fixtures, setFixtures] = useState<Resource<LiveFixture[]>>(pending);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = <T,>(request: Promise<T>, set: (value: Resource<T>) => void) => {
+      request.then((data) => { if (!controller.signal.aborted) set({ data, error: null, loading: false }); })
+        .catch((error: unknown) => { if (!controller.signal.aborted) set({ data: null, error: error instanceof Error ? error.message : "Please try again.", loading: false }); });
+    };
+    load(fetchStandings(league, false, controller.signal), setCurrent);
+    load(fetchStandings(league, true, controller.signal), setPredicted);
+    load(fetchFixtures(league, controller.signal), setFixtures);
+    return () => controller.abort();
+  }, [league, revision]);
+
+  const refresh = () => {
+    setCurrent(pending()); setPredicted(pending()); setFixtures(pending());
+    setRevision((value) => value + 1);
+  };
+
+  const resource = view === "fixtures" ? fixtures : view === "current" ? current : predicted;
   const query = search.trim().toLowerCase();
-  const fixtures = snapshot.fixtures.filter((fixture) => `${fixture.homeTeam} ${fixture.awayTeam}`.toLowerCase().includes(query));
-  const visible = expanded || query ? fixtures : fixtures.slice(0, 6);
-  const currentRanks = new Map(snapshot.current.map((row) => [row.team, row.rank]));
-  const rows = (view === "predicted" ? snapshot.predicted : snapshot.current).filter((row) => row.team.toLowerCase().includes(query));
-  const leader = hasFixtures ? snapshot.predicted[0] : snapshot.current[0];
-  const movers = snapshot.predicted.filter((row) => (currentRanks.get(row.team) ?? row.rank) > row.rank).length;
-  const totals = snapshot.fixtures.reduce((acc, match) => ({ goals: acc.goals + match.homeGoals + match.awayGoals, draws: acc.draws + Number(match.homeGoals === match.awayGoals) }), { goals: 0, draws: 0 });
+  const rows = (view === "predicted" ? predicted.data : current.data)?.filter((row) => row.team.toLowerCase().includes(query)) ?? [];
+  const matches = fixtures.data?.filter((fixture) => `${fixture.home_team_name} ${fixture.away_team_name}`.toLowerCase().includes(query)) ?? [];
+
+  const visible = expanded || query ? matches : matches.slice(0, 6);
+  const currentRanks = new Map((current.data ?? []).map((row) => [row.team, row.rank]));
+  const movers = predicted.data?.filter((row) => currentRanks.has(row.team) && currentRanks.get(row.team)! > row.rank).length;
+  const leader = predicted.data?.[0] ?? current.data?.[0];
+  const gameweeks = new Set((fixtures.data ?? []).map((fixture) => fixture.gameweek).filter((week) => week != null));
+  const gameweek = gameweeks.size === 1 ? fixtures.data?.[0]?.gameweek : undefined;
 
   return (
     <section aria-labelledby="matchweek-title" className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { label: "Remaining fixtures", value: String(snapshot.fixtures.length).padStart(2, "0"), detail: "in this window", icon: CalendarDays },
-          { label: "Projected goals", value: String(totals.goals).padStart(2, "0"), detail: `${totals.draws} predicted ${totals.draws === 1 ? "draw" : "draws"}`, icon: Trophy },
-          { label: "Climbing the table", value: String(movers).padStart(2, "0"), detail: "clubs projected to rise", icon: ArrowUp },
-        ].map((stat) => (
-          <div key={stat.label} className="flex items-center gap-4 rounded-2xl border border-border bg-card/60 px-5 py-4">
-            <stat.icon aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />
-            <div className="min-w-0 flex-1"><p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">{stat.label}</p><div className="mt-1 flex items-baseline gap-2"><span className="text-3xl font-semibold tracking-tight tabular-nums">{stat.value}</span><span className="text-[11px] text-muted-foreground">{stat.detail}</span></div></div>
-          </div>
-        ))}
+          { label: "Remaining fixtures", value: fixtures.data ? String(fixtures.data.length).padStart(2, "0") : "–", detail: "in this window", icon: CalendarDays },
+          { label: "Projected goals", value: "–", detail: "predictions on each fixture", icon: Trophy },
+          { label: "Climbing the table", value: current.data && predicted.data ? String(movers).padStart(2, "0") : "–", detail: "compared with current standings", icon: ArrowUp },
+        ].map((stat) => <div key={stat.label} className="flex items-center gap-4 rounded-2xl border border-border bg-card/60 px-5 py-4"><stat.icon aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" /><div className="min-w-0 flex-1"><p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">{stat.label}</p><div className="mt-1 flex items-baseline gap-2"><span className="text-3xl font-semibold tracking-tight tabular-nums">{stat.value}</span><span className="text-[11px] text-muted-foreground">{stat.detail}</span></div></div></div>)}
       </div>
-
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow mb-2">{competition.name}{roundLabel && ` · ${roundLabel}`}</p><h2 id="matchweek-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">The matchweek, mapped.</h2><p className="mt-2 text-xs text-muted-foreground">{hasFixtures ? `${snapshot.fixtures.length} ${snapshot.fixtures.length === 1 ? "fixture remains" : "fixtures remain"} in this saved window.` : "No fixtures remain in this saved window. View the latest saved standings below."}</p></div>
-        <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Clock3 aria-hidden="true" className="h-3 w-3" /> Saved <time dateTime={snapshot.capturedAt}>{formatSnapshotDate(snapshot.capturedAt)}</time></p>
-      </div>
-
+      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow mb-2">{competitions[league].name}{gameweek != null && ` · Gameweek ${gameweek}`}</p><h2 id="matchweek-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">The matchweek, mapped.</h2><p className="mt-2 text-xs text-muted-foreground">{fixtures.loading ? "Loading fixtures…" : fixtures.data ? `${fixtures.data.length} upcoming fixtures in this window.` : "Fixtures are currently unavailable."}</p></div><button type="button" onClick={refresh} className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"><RefreshCw aria-hidden="true" className="h-3 w-3" /> Refresh</button></div>
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        <div role="group" aria-label="Matchweek view" className="flex w-full min-w-0 rounded-xl bg-muted/70 p-1 sm:w-auto">
-          {(["fixtures", "current", "predicted"] as const).map((option) => <button key={option} type="button" aria-pressed={view === option} onClick={() => setView(option)} className={`min-w-0 flex-1 rounded-lg px-2 py-2.5 text-[11px] sm:flex-none font-semibold transition-colors sm:px-4 sm:text-xs ${view === option ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>{option === "fixtures" ? "Fixtures" : option === "current" ? "Current standings" : "Predicted standings"}</button>)}
-        </div>
+        <div role="group" aria-label="Matchweek view" className="flex w-full min-w-0 rounded-xl bg-muted/70 p-1 sm:w-auto">{([ ["fixtures", "Fixtures"], ["current", "Current standings"], ["predicted", "Predicted standings"] ] as const).map(([key, label]) => <button type="button" key={key} onClick={() => setView(key)} aria-pressed={view === key} className={`min-w-0 flex-1 rounded-lg px-2 py-2.5 text-[11px] font-semibold transition-colors sm:flex-none sm:px-4 sm:text-xs ${view === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}</div>
         <label className="relative block w-full sm:w-52"><Search aria-hidden="true" className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><span className="sr-only">Search clubs</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a club…" className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
       </div>
-
-      {view === "fixtures" ? (
-        <>
-          {visible.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visible.map((fixture, index) => <MatchCard key={`${fixture.homeTeam}-${fixture.awayTeam}`} fixture={fixture} index={index} onOpenLab={onOpenLab} />)}</div> : <p role="status" className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">{query ? "No matches for that club." : "No upcoming fixtures in this snapshot."}</p>}
-          {!query && fixtures.length > 6 && <div className="text-center"><button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="inline-flex items-center gap-2 rounded-xl border border-border px-5 py-3 text-xs font-semibold hover:bg-card">{expanded ? "Show fewer matches" : `View all ${fixtures.length} matches`}{expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}</button></div>}
-        </>
-      ) : (
-        <div role="region" aria-label={`${view} ${competition.name} standings. Scroll horizontally for all columns.`} tabIndex={0} className="overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="w-full min-w-[720px] text-sm tabular-nums"><caption className="sr-only">{view === "current" ? "Current standings" : "Predicted standings"} · {competition.name}</caption>
-            <thead><tr className="border-b border-border bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground"><th scope="col" className="px-4 py-4 text-center">#</th><th scope="col" className="sticky left-0 z-10 bg-card px-4 py-4 text-left">Club</th>{view === "predicted" && <th scope="col" className="px-3 py-4 text-center">Move</th>}{columns.map(([key, label, full]) => <th scope="col" key={key} className="px-3 py-4 text-center"><abbr title={full} className="no-underline">{label}</abbr></th>)}</tr></thead>
-            <tbody>{rows.map((row) => {
-              const change = (currentRanks.get(row.team) ?? row.rank) - row.rank;
-              return <tr key={row.team} className="group border-b border-border/50 last:border-0 hover:bg-muted/30"><td className="px-4 py-3.5 text-center text-xs text-muted-foreground">{String(row.rank).padStart(2, "0")}</td><th scope="row" className="sticky left-0 z-10 bg-card px-4 py-3.5 text-left group-hover:bg-muted"><span className="flex items-center gap-3 whitespace-nowrap text-xs font-semibold"><TeamCrest team={row.team} className="h-6 w-6" />{row.team}</span></th>{view === "predicted" && <td className="px-3 text-center"><span aria-label={change ? `${change > 0 ? "Up" : "Down"} ${Math.abs(change)} positions` : "Unchanged"} className={`inline-flex items-center gap-1 text-[11px] ${change > 0 ? "text-emerald-700 dark:text-emerald-400" : change < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>{change > 0 ? <ArrowUp aria-hidden="true" className="h-3 w-3" /> : change < 0 ? <ArrowDown aria-hidden="true" className="h-3 w-3" /> : <Minus aria-hidden="true" className="h-3 w-3" />}{change !== 0 && Math.abs(change)}</span></td>}{columns.map(([key]) => <td key={key} className={`px-3 py-3.5 text-center text-xs ${key === "points" ? "bg-primary/5 font-bold text-foreground" : "text-muted-foreground"}`}>{key === "goal_difference" && row[key] > 0 ? "+" : ""}{row[key]}</td>)}</tr>;
-            })}</tbody>
-          </table>
-          {!rows.length && <p role="status" className="p-10 text-center text-sm text-muted-foreground">{query ? "No clubs found." : "No standings available."}</p>}
-        </div>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
-        <p className="max-w-lg text-[11px] leading-relaxed text-muted-foreground">{view === "fixtures" ? "Saved model projections for the upcoming fixture window. Kickoff times, where available, are UTC." : "Sorted by points, goal difference, then goals scored. Full competition tiebreaks are excluded."}</p>
-        <button onClick={() => onOpenLab?.()} className="flex items-center gap-2 text-xs font-semibold text-primary">Build your own matchup <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" /></button>
-      </div>
-
-      {leader && <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-border bg-card/60 px-6 py-5"><div className="flex items-center gap-4"><TeamCrest team={leader.team} className="h-11 w-11" /><div><p className="eyebrow mb-1">{hasFixtures ? "Projected leader" : "Current leader"}</p><p className="text-base font-semibold">{leader.team}</p></div></div><p className="flex items-baseline gap-2"><span className="text-3xl font-semibold tracking-tight">{leader.points}</span><span className="text-xs text-muted-foreground">{hasFixtures ? "points after this window" : "points"}</span></p></div>}
+      {resource.loading ? <p role="status" className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">Loading {view === "fixtures" ? "fixtures" : "standings"}…</p> : resource.error ? <div role="alert" className="rounded-2xl border border-border bg-card p-8"><p className="font-semibold">Couldn’t load {view === "fixtures" ? "fixtures" : "standings"}.</p><p className="mt-2 text-sm text-muted-foreground">{resource.error}</p><button type="button" onClick={refresh} className="mt-4 text-sm font-semibold text-primary">Try again</button></div> : view === "fixtures" ? <>
+        {visible.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visible.map((match, index) => <FixtureCard key={`${match.home_teams}-${match.away_teams}-${index}`} match={match} index={index} league={league} onOpenLab={onOpenLab} />)}</div> : <p role="status" className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">{query ? "No matches for that club." : "No upcoming fixtures in this window."}</p>}
+        {!query && matches.length > 6 && <div className="text-center"><button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="inline-flex items-center gap-2 rounded-xl border border-border px-5 py-3 text-xs font-semibold hover:bg-card">{expanded ? "Show fewer matches" : `View all ${matches.length} matches`}{expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}</button></div>}
+      </> : <div role="region" aria-label={`${view} ${competitions[league].name} standings. Scroll horizontally for all columns.`} tabIndex={0} className="overflow-x-auto rounded-2xl border border-border bg-card">
+        <table className="w-full min-w-[720px] text-sm tabular-nums"><caption className="sr-only">{view === "current" ? "Current standings" : "Predicted standings"} · {competitions[league].name}</caption><thead><tr className="border-b border-border bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground"><th scope="col" className="px-4 py-4 text-center">#</th><th scope="col" className="sticky left-0 z-10 bg-card px-4 py-4 text-left">Club</th>{view === "predicted" && <th scope="col" className="px-3 py-4 text-center">Move</th>}{columns.map(([key, label, full]) => <th scope="col" key={key} className="px-3 py-4 text-center"><abbr title={full} className="no-underline">{label}</abbr></th>)}</tr></thead><tbody>{rows.map((row) => { const previous = currentRanks.get(row.team); const change = previous == null ? null : previous - row.rank; return <tr key={row.team} className="group border-b border-border/50 last:border-0 hover:bg-muted/30"><td className="px-4 py-3.5 text-center text-xs text-muted-foreground">{String(row.rank).padStart(2, "0")}</td><th scope="row" className="sticky left-0 z-10 bg-card px-4 py-3.5 text-left group-hover:bg-muted"><span className="flex items-center gap-3 whitespace-nowrap text-xs font-semibold"><TeamCrest team={row.team} className="h-6 w-6" />{row.team}</span></th>{view === "predicted" && <td className="px-3 text-center"><span className={`inline-flex items-center gap-1 text-[11px] ${change && change > 0 ? "text-emerald-700 dark:text-emerald-400" : change && change < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>{change == null ? "–" : change > 0 ? <ArrowUp aria-label="Up" className="h-3 w-3" /> : change < 0 ? <ArrowDown aria-label="Down" className="h-3 w-3" /> : <Minus aria-label="Unchanged" className="h-3 w-3" />}{change != null && change !== 0 && Math.abs(change)}</span></td>}{columns.map(([key]) => <td key={key} className={`px-3 py-3.5 text-center text-xs ${key === "points" ? "bg-primary/5 font-bold text-foreground" : "text-muted-foreground"}`}>{key === "goal_difference" && row[key] > 0 ? "+" : ""}{row[key]}</td>)}</tr>; })}</tbody></table>{!rows.length && <p role="status" className="p-10 text-center text-sm text-muted-foreground">{query ? "No clubs found." : "No standings available."}</p>}
+      </div>}
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center"><p className="max-w-lg text-[11px] leading-relaxed text-muted-foreground">{view === "fixtures" ? "Fixture predictions are calculated live and may differ from the saved predicted table. Kickoff times are UTC when available." : view === "predicted" ? "Latest saved projection, compared with current standings. The snapshot time is not available." : "Current standings from the provider."}</p><button onClick={() => onOpenLab?.()} className="flex items-center gap-2 text-xs font-semibold text-primary">Build your own matchup <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" /></button></div>
+      {leader && <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-border bg-card/60 px-6 py-5"><div className="flex items-center gap-4"><TeamCrest team={leader.team} className="h-11 w-11" /><div><p className="eyebrow mb-1">{predicted.data?.length ? "Projected leader" : "Current leader"}</p><p className="text-base font-semibold">{leader.team}</p></div></div><p className="flex items-baseline gap-2"><span className="text-3xl font-semibold tracking-tight">{leader.points}</span><span className="text-xs text-muted-foreground">points</span></p></div>}
     </section>
   );
 }

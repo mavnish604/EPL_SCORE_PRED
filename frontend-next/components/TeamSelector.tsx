@@ -7,15 +7,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectGroup,
-  SelectLabel,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { getTeamLogo } from "@/lib/teamLogos";
-import { UCL_CURRENT_SEASON_TEAMS } from "@/lib/domesticLeagues";
 
 interface Props {
   label: string;
@@ -36,48 +33,15 @@ export default memo(function TeamSelector({
   isLoading,
   side,
   disabledTeam,
-  isUcl = false,
 }: Props) {
   const isHome = side === "home";
   const logoSrc = selected ? getTeamLogo(selected) : undefined;
   const [searchFilter, setSearchFilter] = useState("");
 
-  // Filter and prioritize teams
-  const { seasonTeams, otherTeams, filteredList } = useMemo(() => {
-    const q = searchFilter.toLowerCase().trim();
-
-    if (!isUcl) {
-      const list = teams.filter((t) => !q || t.toLowerCase().includes(q));
-      return { seasonTeams: [], otherTeams: [], filteredList: list };
-    }
-
-    const currentSeasonSet = new Set(
-      UCL_CURRENT_SEASON_TEAMS.map((name) => name.toLowerCase())
-    );
-
-    const sTeams: string[] = [];
-    const oTeams: string[] = [];
-
-    // Prioritize the clubs in the saved season, using only accepted API names.
-    for (const team of UCL_CURRENT_SEASON_TEAMS) {
-      if (teams.includes(team) && (!q || team.toLowerCase().includes(q))) {
-        sTeams.push(team);
-      }
-    }
-
-    // Historical & other clubs
-    for (const team of teams) {
-      if (!currentSeasonSet.has(team.toLowerCase()) && (!q || team.toLowerCase().includes(q))) {
-        oTeams.push(team);
-      }
-    }
-
-    return {
-      seasonTeams: sTeams,
-      otherTeams: oTeams,
-      filteredList: [...sTeams, ...oTeams],
-    };
-  }, [teams, searchFilter, isUcl]);
+  const filteredList = useMemo(() => {
+    const query = searchFilter.toLowerCase().trim();
+    return teams.filter((team) => !query || team.toLowerCase().includes(query));
+  }, [teams, searchFilter]);
 
   const renderTeamItem = (t: string) => {
     const itemLogo = getTeamLogo(t);
@@ -202,25 +166,6 @@ export default memo(function TeamSelector({
             <div className="p-3 text-center text-xs text-muted-foreground">
               No matching teams found
             </div>
-          ) : isUcl ? (
-            <>
-              {seasonTeams.length > 0 && (
-                <SelectGroup>
-                  <SelectLabel className="text-[0.62rem] font-extrabold uppercase tracking-widest text-primary px-2.5 py-1.5 bg-primary/10 rounded-md mx-1 my-1">
-                    Current league phase
-                  </SelectLabel>
-                  {seasonTeams.map(renderTeamItem)}
-                </SelectGroup>
-              )}
-              {otherTeams.length > 0 && (
-                <SelectGroup>
-                  <SelectLabel className="text-[0.62rem] font-bold uppercase tracking-widest text-muted-foreground/80 px-2.5 py-1.5 mt-2 mx-1 border-t border-border/40">
-                    Other UCL Clubs ({otherTeams.length})
-                  </SelectLabel>
-                  {otherTeams.map(renderTeamItem)}
-                </SelectGroup>
-              )}
-            </>
           ) : (
             filteredList.map(renderTeamItem)
           )}

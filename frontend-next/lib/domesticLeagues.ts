@@ -1,5 +1,3 @@
-import uclSnapshot from "@/data/ucl-standings.json";
-
 export interface DomesticLeagueOption {
   label: string;
   value: string;
@@ -27,26 +25,6 @@ export const DOMESTIC_LEAGUES: DomesticLeagueOption[] = [
 ];
 
 export type DomesticLeague = (typeof DOMESTIC_LEAGUES)[number]["value"];
-
-// These aliases name the same club in the provider and model vocabularies.
-const UCL_MODEL_NAMES: Record<string, string> = {
-  "Paris Saint-Germain": "Paris SG",
-  "Internazionale": "Inter",
-  "Atlético Madrid": "Atletico Madrid",
-  "VfB Stuttgart": "Stuttgart",
-  "Feyenoord Rotterdam": "Feyenoord",
-  "FC Porto": "Porto",
-  "AS Roma": "Roma",
-  "Lens": "RC Lens",
-  "Slavia Prague": "Slavia Praha",
-  "LASK Linz": "LASK",
-  "Sabah FK": "Sabah",
-};
-
-// Follow the saved season's standings rather than pinning an old season's clubs.
-export const UCL_CURRENT_SEASON_TEAMS = uclSnapshot.current.map(
-  ({ team }) => UCL_MODEL_NAMES[team] ?? team
-);
 
 // Known club-to-domestic-league mapping for UCL clubs
 const CLUB_DOMESTIC_MAP: Record<string, DomesticLeague> = {
