@@ -100,3 +100,31 @@ test("UCL clubs select their actual domestic leagues", async () => {
     assert.equal(exports.getDefaultDomesticLeague(team), league, team);
   }
 });
+
+test("fetchStandings and fetchFixtures capture fallback headers", async () => {
+  const headers = new Map([
+    ["X-Standings-Source", "database-fallback"],
+    ["X-Standings-Snapshot-At", "2026-11-28T00:00:00Z"],
+  ]);
+  const calls = [];
+  const exports = {};
+  vm.runInNewContext(compiled, {
+    exports,
+    process: { env: { NEXT_PUBLIC_API_URL: "https://backend.example" } },
+    fetch: async (url, options) => {
+      calls.push({ url, options });
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: (name) => headers.get(name) ?? null },
+        json: async () => [{ rank: 1, team: "Arsenal", points: 28 }],
+      };
+    },
+  });
+
+  const standings = await exports.fetchStandings("epl", false);
+  assert.equal(standings.source, "database-fallback");
+  assert.equal(standings.snapshotAt, "2026-11-28T00:00:00Z");
+  assert.equal(standings.length, 1);
+  assert.equal(standings[0].team, "Arsenal");
+});

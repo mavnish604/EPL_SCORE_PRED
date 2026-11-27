@@ -38,6 +38,59 @@ async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> 
   return response.json() as Promise<T>;
 }
 
+export type WithFallbackMeta<T> = T & {
+  source?: string | null;
+  snapshotAt?: string | null;
+};
+
+async function fetchLeagueResource<T>(
+  url: string,
+  prefix: "X-Standings" | "X-Fixtures",
+  signal?: AbortSignal
+): Promise<WithFallbackMeta<T>> {
+  const response = await fetch(url, {
+    cache: "no-store",
+    signal,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    let errorMsg = `API request failed with status ${response.status}`;
+    try {
+      const errorJson = await response.json();
+      if (errorJson && typeof errorJson === "object" && "detail" in errorJson) {
+        errorMsg =
+          typeof errorJson.detail === "string"
+            ? errorJson.detail
+            : JSON.stringify(errorJson.detail);
+      }
+    } catch {
+      try {
+        const body = await response.text();
+        if (body) errorMsg = body;
+      } catch {
+        // ignore fallback errors
+      }
+    }
+    throw new Error(errorMsg);
+  }
+
+  const payload = (await response.json()) as WithFallbackMeta<T>;
+  const source = response.headers?.get ? response.headers.get(`${prefix}-Source`) : null;
+  const snapshotAt = response.headers?.get ? response.headers.get(`${prefix}-Snapshot-At`) : null;
+
+  if (payload != null && typeof payload === "object") {
+    Object.defineProperties(payload, {
+      source: { value: source, enumerable: true, writable: true, configurable: true },
+      snapshotAt: { value: snapshotAt, enumerable: true, writable: true, configurable: true },
+    });
+  }
+
+  return payload;
+}
+
 export interface LiveFixture {
   home_teams: string;
   away_teams: string;
@@ -47,12 +100,20 @@ export interface LiveFixture {
   gameweek?: number | null;
 }
 
-export function fetchStandings(league: League, predicted: boolean, signal?: AbortSignal): Promise<Standing[]> {
-  return fetchJson<Standing[]>(`${API_ORIGIN}/${league}/${predicted ? "predicted_table" : "standings"}`, { signal });
+export function fetchStandings(league: League, predicted: boolean, signal?: AbortSignal): Promise<WithFallbackMeta<Standing[]>> {
+  return fetchLeagueResource<Standing[]>(
+    `${API_ORIGIN}/${league}/${predicted ? "predicted_table" : "standings"}`,
+    "X-Standings",
+    signal
+  );
 }
 
-export function fetchFixtures(league: League, signal?: AbortSignal): Promise<LiveFixture[]> {
-  return fetchJson<LiveFixture[]>(`${API_ORIGIN}/${league}/get_fixtures`, { signal });
+export function fetchFixtures(league: League, signal?: AbortSignal): Promise<WithFallbackMeta<LiveFixture[]>> {
+  return fetchLeagueResource<LiveFixture[]>(
+    `${API_ORIGIN}/${league}/get_fixtures`,
+    "X-Fixtures",
+    signal
+  );
 }
 
 export async function fetchTeams(league: League = "epl"): Promise<string[]> {

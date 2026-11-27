@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, Minus, RefreshCw, RotateCcw, Search, Trophy, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, Minus, RefreshCw, RotateCcw, Search, Trophy, X } from "lucide-react";
 import TeamCrest from "@/components/TeamCrest";
 import { useLiveScores } from "@/hooks/useLiveScores";
 import { calculateClinchStatus, calculateMatchInsights, simulateStandings } from "@/lib/analytics";
-import { fetchFixtures, fetchPrediction, fetchStandings, type LiveFixture } from "@/lib/api/predictor";
+import { fetchFixtures, fetchPrediction, fetchStandings, type LiveFixture, type WithFallbackMeta } from "@/lib/api/predictor";
 import type { LiveMatchScore } from "@/lib/liveScores";
 import { competitions } from "@/lib/competitions";
 import { getUclFixtureLeague } from "@/lib/uclFixtureLeagues";
@@ -13,8 +13,14 @@ import type { League, PredictionResult } from "@/types/prediction";
 import type { Standing } from "@/types/standings";
 
 type View = "fixtures" | "current" | "predicted" | "whatif";
-type Resource<T> = { data: T | null; error: string | null; loading: boolean };
-const pending = <T,>(): Resource<T> => ({ data: null, error: null, loading: true });
+type Resource<T> = {
+  data: T | null;
+  error: string | null;
+  loading: boolean;
+  source?: string | null;
+  snapshotAt?: string | null;
+};
+const pending = <T,>(): Resource<T> => ({ data: null, error: null, loading: true, source: null, snapshotAt: null });
 const columns = [["played", "P", "Played"], ["won", "W", "Won"], ["drawn", "D", "Drawn"], ["lost", "L", "Lost"], ["goals_for", "GF", "Goals for"], ["goals_against", "GA", "Goals against"], ["goal_difference", "GD", "Goal difference"], ["points", "Pts", "Points"]] as const;
 
 function FixtureCard({
@@ -478,9 +484,24 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
 
   useEffect(() => {
     const controller = new AbortController();
-    const load = <T,>(request: Promise<T>, set: (value: Resource<T>) => void) => {
-      request.then((data) => { if (!controller.signal.aborted) set({ data, error: null, loading: false }); })
-        .catch((error: unknown) => { if (!controller.signal.aborted) set({ data: null, error: error instanceof Error ? error.message : "Please try again.", loading: false }); });
+    const load = <T,>(request: Promise<WithFallbackMeta<T>>, set: (value: Resource<T>) => void) => {
+      request
+        .then((data) => {
+          if (!controller.signal.aborted) {
+            set({
+              data,
+              error: null,
+              loading: false,
+              source: data.source ?? null,
+              snapshotAt: data.snapshotAt ?? null,
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          if (!controller.signal.aborted) {
+            set({ data: null, error: error instanceof Error ? error.message : "Please try again.", loading: false, source: null, snapshotAt: null });
+          }
+        });
     };
     load(fetchStandings(league, false, controller.signal), setCurrent);
     load(fetchStandings(league, true, controller.signal), setPredicted);
@@ -618,6 +639,24 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
           />
         </label>
       </div>
+
+      {resource.source === "database-fallback" && (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>
+              <strong>Using saved database backup:</strong> Live provider is unreachable. Serving saved snapshot
+              {resource.snapshotAt && !Number.isNaN(Date.parse(resource.snapshotAt))
+                ? ` from ${new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(resource.snapshotAt))} UTC`
+                : ""}
+              .
+            </span>
+          </div>
+          <span className="hidden sm:inline-block rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+            Offline Fallback
+          </span>
+        </div>
+      )}
 
       {resource.loading ? (
         <p role="status" className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
