@@ -1,20 +1,40 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { fetchLiveScores, findMatchingScore, type LiveMatchScore } from "@/lib/liveScores";
 import type { League } from "@/types/prediction";
 
 export function useLiveScores(league: League) {
-  const [scores, setScores] = useState<LiveMatchScore[]>([]);
+  const [state, setState] = useState<{ league: League; scores: LiveMatchScore[] }>({
+    league,
+    scores: [],
+  });
   const isFetchingRef = useRef(false);
 
   const loadScores = useCallback(async (signal?: AbortSignal) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
-      const data = await fetchLiveScores(league, signal);
-      if (Array.isArray(data)) {
-        setScores(data);
+      let data: LiveMatchScore[] = [];
+      try {
+        const res = await fetch(`/api/live-scores?league=${encodeURIComponent(league)}`, {
+          cache: "no-store",
+          signal,
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json)) data = json;
+        } else {
+          data = await fetchLiveScores(league, signal);
+        }
+      } catch {
+        if (!signal?.aborted) {
+          data = await fetchLiveScores(league, signal);
+        }
+      }
+
+      if (!signal?.aborted && Array.isArray(data)) {
+        setState({ league, scores: data });
       }
     } catch {
       // ignore
@@ -37,6 +57,11 @@ export function useLiveScores(league: League) {
       clearInterval(interval);
     };
   }, [league, loadScores]);
+
+  const scores = useMemo(
+    () => (state.league === league ? state.scores : []),
+    [state.league, state.scores, league]
+  );
 
   const findScore = useCallback(
     (homeTeam: string, awayTeam: string): LiveMatchScore | null => {

@@ -6,7 +6,7 @@ import TeamCrest from "@/components/TeamCrest";
 import { useLiveScores } from "@/hooks/useLiveScores";
 import { calculateClinchStatus, calculateMatchInsights, simulateStandings } from "@/lib/analytics";
 import { fetchFixtures, fetchPrediction, fetchStandings, type LiveFixture, type WithFallbackMeta } from "@/lib/api/predictor";
-import type { LiveMatchScore } from "@/lib/liveScores";
+import { matchTeams, type LiveMatchScore } from "@/lib/liveScores";
 import { competitions } from "@/lib/competitions";
 import { getUclFixtureLeague } from "@/lib/uclFixtureLeagues";
 import type { League, PredictionResult } from "@/types/prediction";
@@ -457,7 +457,7 @@ function WhatIfTablePopup({
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-border/70 bg-muted/20 px-3 py-2 text-[11px]">
-        <span className="text-[10px] text-muted-foreground">Pick 1, X, 2 to simulate</span>
+        <span className="text-[10px] text-muted-foreground">Pick outcomes to simulate</span>
         <button
           type="button"
           onClick={onFullView}
@@ -467,6 +467,80 @@ function WhatIfTablePopup({
         </button>
       </div>
     </aside>
+  );
+}
+
+function LiveScoreCard({
+  score,
+  homeRank,
+  awayRank,
+  onOpenLab,
+}: {
+  score: LiveMatchScore;
+  homeRank?: number;
+  awayRank?: number;
+  onOpenLab?: (home?: string, away?: string) => void;
+}) {
+  return (
+    <article className="match-card group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-red-500/35 bg-card transition-all hover:border-red-500/60 hover:shadow-sm">
+      <div>
+        <div className="flex items-center justify-between border-b border-border/60 bg-red-500/5 px-5 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+            </span>
+            LIVE {score.clock}
+          </span>
+          <span className="font-semibold text-red-600 dark:text-red-400">In Progress</span>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-6">
+          <div className="flex min-w-0 flex-col items-center gap-2 text-center">
+            <div className="crest-plinth flex h-16 w-16 items-center justify-center rounded-full border border-border/40 shadow-2xs sm:h-18 sm:w-18">
+              <TeamCrest team={score.homeTeamName} className="h-10 w-10 sm:h-11 sm:w-11" />
+            </div>
+            <div className="flex flex-col items-center">
+              <p className="line-clamp-2 max-w-[130px] text-xs font-semibold leading-snug sm:text-sm">{score.homeTeamName}</p>
+              {homeRank != null && <span className="text-[10px] text-muted-foreground font-semibold">#{homeRank}</span>}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center">
+            <div className="flex items-baseline gap-1.5 text-3xl font-black tabular-nums tracking-tight">
+              <span className="text-red-600 dark:text-red-400">{score.homeScore}</span>
+              <span className="text-muted-foreground/40 text-lg">–</span>
+              <span className="text-red-600 dark:text-red-400">{score.awayScore}</span>
+            </div>
+            <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-red-500 animate-pulse">
+              {score.clock}
+            </span>
+          </div>
+
+          <div className="flex min-w-0 flex-col items-center gap-2 text-center">
+            <div className="crest-plinth flex h-16 w-16 items-center justify-center rounded-full border border-border/40 shadow-2xs sm:h-18 sm:w-18">
+              <TeamCrest team={score.awayTeamName} className="h-10 w-10 sm:h-11 sm:w-11" />
+            </div>
+            <div className="flex flex-col items-center">
+              <p className="line-clamp-2 max-w-[130px] text-xs font-semibold leading-snug sm:text-sm">{score.awayTeamName}</p>
+              {awayRank != null && <span className="text-[10px] text-muted-foreground font-semibold">#{awayRank}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        {onOpenLab && (
+          <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2.5">
+            <span className="text-[10px] text-muted-foreground">Live matchday</span>
+            <button type="button" onClick={() => onOpenLab(score.homeTeamName, score.awayTeamName)} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary transition-colors hover:text-primary/80">
+              Analyze in Lab <ArrowRight aria-hidden="true" className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+        <div aria-hidden="true" className="h-0.5 bg-gradient-to-r from-red-500/70 via-red-500/20 to-transparent" />
+      </div>
+    </article>
   );
 }
 
@@ -480,7 +554,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
   const [fixtures, setFixtures] = useState<Resource<LiveFixture[]>>(pending);
   const [simulations, setSimulations] = useState<Map<number, "home" | "draw" | "away">>(new Map());
   const [showPopup, setShowPopup] = useState(false);
-  const { findScore } = useLiveScores(league);
+  const { scores, findScore } = useLiveScores(league);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -564,6 +638,30 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
   const matches = useMemo(() => {
     return fixtures.data?.filter((fixture) => `${fixture.home_team_name} ${fixture.away_team_name}`.toLowerCase().includes(query)) ?? [];
   }, [fixtures.data, query]);
+
+  const findRank = (teamName: string): number | undefined => {
+    const exact = currentRanks.get(teamName);
+    if (exact != null) return exact;
+    for (const [name, rank] of currentRanks.entries()) {
+      if (matchTeams(name, teamName)) return rank;
+    }
+    return undefined;
+  };
+
+  const unmatchedScores = useMemo(() => {
+    const fixtureList = fixtures.data ?? [];
+    return scores.filter((score) => {
+      const matchesQuery = !query || `${score.homeTeamName} ${score.awayTeamName}`.toLowerCase().includes(query);
+      if (!matchesQuery) return false;
+      const inFixtures = fixtureList.some(
+        (fixture) => matchTeams(score.homeTeamName, fixture.home_team_name) && matchTeams(score.awayTeamName, fixture.away_team_name)
+      );
+      return !inFixtures;
+    });
+  }, [scores, fixtures.data, query]);
+
+  const unmatchedLive = useMemo(() => unmatchedScores.filter((s) => s.isLive), [unmatchedScores]);
+  const unmatchedFinished = useMemo(() => unmatchedScores.filter((s) => s.isFinished), [unmatchedScores]);
 
   const visible = expanded || query ? matches : matches.slice(0, 6);
   const movers = predicted.data?.filter((row) => currentRanks.has(row.team) && currentRanks.get(row.team)! > row.rank).length;
@@ -670,6 +768,62 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
         </div>
       ) : view === "fixtures" ? (
         <>
+          {unmatchedLive.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                </span>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400">
+                  Live Now ({unmatchedLive.length})
+                </h3>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {unmatchedLive.map((score) => (
+                  <LiveScoreCard
+                    key={score.id}
+                    score={score}
+                    homeRank={findRank(score.homeTeamName)}
+                    awayRank={findRank(score.awayTeamName)}
+                    onOpenLab={onOpenLab}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {unmatchedFinished.length > 0 && (
+            <div className="space-y-2.5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Recent Results
+              </h3>
+              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {unmatchedFinished.slice(0, expanded || query ? unmatchedFinished.length : 6).map((score) => (
+                  <div
+                    key={score.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/60 px-3.5 py-2.5 text-xs"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <TeamCrest team={score.homeTeamName} className="h-5 w-5 shrink-0" />
+                      <span className="truncate font-medium">{score.homeTeamName}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-muted/70 px-2.5 py-1 font-bold tabular-nums">
+                      <span>{score.homeScore}</span>
+                      <span className="text-muted-foreground">–</span>
+                      <span>{score.awayScore}</span>
+                      <span className="ml-1 text-[9px] font-semibold uppercase text-muted-foreground">{score.clock}</span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                      <span className="truncate text-right font-medium">{score.awayTeamName}</span>
+                      <TeamCrest team={score.awayTeamName} className="h-5 w-5 shrink-0" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {visible.length ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visible.map((match, index) => (
@@ -687,11 +841,11 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
                 />
               ))}
             </div>
-          ) : (
+          ) : unmatchedLive.length === 0 && unmatchedFinished.length === 0 ? (
             <p role="status" className="rounded-2xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
               {query ? "No matches for that club." : "No upcoming fixtures in this window."}
             </p>
-          )}
+          ) : null}
           {!query && matches.length > 6 && (
             <div className="text-center">
               <button
@@ -737,7 +891,7 @@ export default function MatchweekDashboard({ league, onOpenLab }: { league: Leag
             <div>
               <p className="font-semibold text-sm">Interactive What-If Simulation</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Toggle outcomes (1 = Home, X = Draw, 2 = Away) on the fixtures to immediately see how the table shifts.
+                Toggle outcomes (Home Win, Draw, Away Win) on the fixtures to immediately see how the table shifts.
               </p>
             </div>
             {simulations.size > 0 && (

@@ -130,6 +130,14 @@ export async function fetchLiveScores(league: League, signal?: AbortSignal): Pro
 
       const isLive = state === "in";
       const isFinished = state === "post" || Boolean(event.status?.type?.completed);
+      const formattedClock = displayClock
+        ? displayClock.endsWith("'")
+          ? displayClock
+          : `${displayClock}'`
+        : "";
+      const clock = isFinished
+        ? detail || "FT"
+        : formattedClock || detail || (isLive ? "LIVE" : "");
 
       results.push({
         id: event.id,
@@ -138,7 +146,7 @@ export async function fetchLiveScores(league: League, signal?: AbortSignal): Pro
         homeScore: isNaN(homeScore) ? 0 : homeScore,
         awayScore: isNaN(awayScore) ? 0 : awayScore,
         state,
-        clock: displayClock ? `${displayClock}'` : detail || (isLive ? "LIVE" : isFinished ? "FT" : ""),
+        clock,
         detail,
         isLive,
         isFinished,
